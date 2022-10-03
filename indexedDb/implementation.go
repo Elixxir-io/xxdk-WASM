@@ -279,9 +279,17 @@ func (w *wasmModel) UpdateSentStatus(uuid uint64, messageID cryptoChannel.Messag
 		return
 	}
 	newMessage.Status = uint8(status)
-	newMessage.MessageID = messageID.Bytes()
-	newMessage.Round = uint64(round.ID)
-	newMessage.Timestamp = timestamp
+	if !messageID.Equals(cryptoChannel.MessageID{}) {
+		newMessage.MessageID = messageID.Bytes()
+	}
+
+	if round.ID == 0 {
+		newMessage.Round = uint64(round.ID)
+	}
+
+	if !timestamp.Equal(time.Time{}) {
+		newMessage.Timestamp = timestamp
+	}
 
 	// Store the updated Message
 	_, err = w.receiveHelper(newMessage)
