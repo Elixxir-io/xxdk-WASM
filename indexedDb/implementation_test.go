@@ -45,7 +45,7 @@ func TestWasmModel_UpdateSentStatus(t *testing.T) {
 	// Store a test message
 	testMsg := buildMessage([]byte(testString), testMsgId.Bytes(),
 		nil, testString, testString, cid, time.Now(),
-		time.Second, channels.Sent)
+		time.Second, 0, channels.Sent)
 	uuid, err := eventModel.receiveHelper(testMsg)
 	if err != nil {
 		t.Fatalf("%+v", err)
@@ -152,7 +152,7 @@ func TestWasmModel_UUIDTest(t *testing.T) {
 		rnd := rounds.Round{ID: id.Round(42)}
 		uuid := eventModel.ReceiveMessage(channelID, msgID,
 			"test", testString+fmt.Sprintf("%d", i), cid, time.Now(),
-			time.Hour, rnd, channels.Sent)
+			time.Hour, rnd, 0, channels.Sent)
 		uuids[i] = uuid
 	}
 

@@ -149,30 +149,28 @@ func (w *wasmModel) LeaveChannel(channelID *id.ID) {
 // It may be called multiple times on the same message; it is incumbent on the
 // user of the API to filter such called by message ID.
 func (w *wasmModel) ReceiveMessage(channelID *id.ID,
-	messageID cryptoChannel.MessageID,
-	nickname, text string, identity cryptoChannel.Identity,
-	timestamp time.Time, lease time.Duration, round rounds.Round,
-	mtype channels.MessageType, status channels.SentStatus) uint64 {
-	parentErr := errors.New("failed to ReceiveMessage")
+	messageID cryptoChannel.MessageID, nickname, text string,
+	identity cryptoChannel.Identity, timestamp time.Time, lease time.Duration,
+	_ rounds.Round, mType channels.MessageType, status channels.SentStatus) uint64 {
 
 	msgToInsert := buildMessage(channelID.Marshal(),
 		messageID.Bytes(), nil, nickname, text, identity,
-		timestamp, lease, mtype, status)
+		timestamp, lease, mType, status)
 
-	// Attempt a lookup on the MessageID if it is non-zero to find
-	// an existing entry for it. This occurs any time a sender
-	// receives their own message from the mixnet.
+	// Attempt a lookup on the MessageID if it is non-zero to find an existing
+	// entry for it. This occurs any time a sender receives their own message
+	// from the mixnet.
 	if !messageID.Equals(cryptoChannel.MessageID{}) {
 		uuid, err := w.msgIDLookup(messageID)
 		if err != nil {
-			//message is already in the database, no insert necessary
+			// message is already in the database, no insert necessary
 			return uuid
 		}
 	}
 
 	uuid, err := w.receiveHelper(msgToInsert)
 	if err != nil {
-		jww.ERROR.Printf("%+v", errors.Wrap(parentErr, err.Error()))
+		jww.ERROR.Printf("Failed to receiver message: %+v", err)
 	}
 
 	go w.receivedMessageCB(uuid, channelID)
@@ -186,25 +184,22 @@ func (w *wasmModel) ReceiveMessage(channelID *id.ID,
 // Messages may arrive our of order, so a reply, in theory, can arrive before
 // the initial message. As a result, it may be important to buffer replies.
 func (w *wasmModel) ReceiveReply(channelID *id.ID,
-	messageID cryptoChannel.MessageID,
-	replyTo cryptoChannel.MessageID, nickname, text string,
-	identity cryptoChannel.Identity, timestamp time.Time,
-	lease time.Duration, round rounds.Round, mtype channels.MessageType,
+	messageID cryptoChannel.MessageID, replyTo cryptoChannel.MessageID,
+	nickname, text string, identity cryptoChannel.Identity, timestamp time.Time,
+	lease time.Duration, _ rounds.Round, mType channels.MessageType,
 	status channels.SentStatus) uint64 {
 
-	parentErr := errors.New("failed to ReceiveReply")
-
 	msgToInsert := buildMessage(channelID.Marshal(),
-		messageID.Bytes(), nil, nickname, text, identity,
-		timestamp, lease, mtype, status)
+		messageID.Bytes(), replyTo.Bytes(), nickname, text, identity,
+		timestamp, lease, mType, status)
 
-	// Attempt a lookup on the MessageID if it is non-zero to find
-	// an existing entry for it. This occurs any time a sender
-	// receives their own message from the mixnet.
+	// Attempt a lookup on the MessageID if it is non-zero to find an existing
+	// entry for it. This occurs any time a sender receives their own message
+	// from the mixnet.
 	if !messageID.Equals(cryptoChannel.MessageID{}) {
 		uuid, err := w.msgIDLookup(messageID)
 		if err != nil {
-			//message is already in the database, no insert necessary
+			// message is already in the database, no insert necessary
 			return uuid
 		}
 	}
@@ -212,7 +207,7 @@ func (w *wasmModel) ReceiveReply(channelID *id.ID,
 	uuid, err := w.receiveHelper(msgToInsert)
 
 	if err != nil {
-		jww.ERROR.Printf("%+v", errors.Wrap(parentErr, err.Error()))
+		jww.ERROR.Printf("Failed to receive reply: %+v", err)
 	}
 	go w.receivedMessageCB(uuid, channelID)
 	return uuid
@@ -224,16 +219,16 @@ func (w *wasmModel) ReceiveReply(channelID *id.ID,
 //
 // Messages may arrive our of order, so a reply, in theory, can arrive before
 // the initial message. As a result, it may be important to buffer reactions.
-func (w *wasmModel) ReceiveReaction(channelID *id.ID, messageID cryptoChannel.MessageID,
-	reactionTo cryptoChannel.MessageID, nickname, reaction string,
-	identity cryptoChannel.Identity, timestamp time.Time,
-	lease time.Duration, round rounds.Round, mtype channels.MessageType,
-	status channels.SentStatus) uint64 {
+func (w *wasmModel) ReceiveReaction(channelID *id.ID,
+	messageID cryptoChannel.MessageID, reactionTo cryptoChannel.MessageID,
+	nickname, reaction string, identity cryptoChannel.Identity,
+	timestamp time.Time, lease time.Duration, round rounds.Round,
+	mType channels.MessageType, status channels.SentStatus) uint64 {
 	parentErr := errors.New("failed to ReceiveReaction")
 
 	msgToInsert := buildMessage(channelID.Marshal(),
-		messageID.Bytes(), nil, nickname, text, identity,
-		timestamp, lease, mtype, status)
+		messageID.Bytes(), reactionTo.Bytes(), nickname, reaction, identity,
+		timestamp, lease, mType, status)
 
 	// Attempt a lookup on the MessageID if it is non-zero to find
 	// an existing entry for it. This occurs any time a sender
@@ -241,7 +236,7 @@ func (w *wasmModel) ReceiveReaction(channelID *id.ID, messageID cryptoChannel.Me
 	if !messageID.Equals(cryptoChannel.MessageID{}) {
 		uuid, err := w.msgIDLookup(messageID)
 		if err != nil {
-			//message is already in the database, no insert necessary
+			// message is already in the database, no insert necessary
 			return uuid
 		}
 	}
@@ -304,8 +299,8 @@ func (w *wasmModel) UpdateSentStatus(uuid uint64, messageID cryptoChannel.Messag
 //       yourself.
 func buildMessage(channelID, messageID, parentID []byte, nickname,
 	text string, identity cryptoChannel.Identity, timestamp time.Time,
-	lease time.Duration,
-	status channels.SentStatus, mType channels.MessageType) *Message {
+	lease time.Duration, mType channels.MessageType,
+	status channels.SentStatus) *Message {
 	return &Message{
 		MessageID:       messageID,
 		Nickname:        nickname,
@@ -319,7 +314,7 @@ func buildMessage(channelID, messageID, parentID []byte, nickname,
 		Text:            text,
 		Type:            uint16(mType),
 		// User Identity Info
-		Pubkey:         []byte(identity.PubKey),
+		Pubkey:         identity.PubKey,
 		Codename:       identity.Codename,
 		Color:          identity.Color,
 		Extension:      identity.Extension,
