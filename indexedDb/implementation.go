@@ -151,11 +151,11 @@ func (w *wasmModel) LeaveChannel(channelID *id.ID) {
 func (w *wasmModel) ReceiveMessage(channelID *id.ID,
 	messageID cryptoChannel.MessageID, nickname, text string,
 	identity cryptoChannel.Identity, timestamp time.Time, lease time.Duration,
-	round rounds.Round, mType channels.MessageType, status channels.SentStatus) uint64 {
+	round rounds.Round, mType channels.MessageType,
+	status channels.SentStatus) uint64 {
 
-	msgToInsert := buildMessage(channelID.Marshal(),
-		messageID.Bytes(), nil, nickname, text, identity,
-		timestamp, lease, mType, status, round.ID)
+	msgToInsert := buildMessage(channelID.Marshal(), messageID.Bytes(), nil,
+		nickname, text, identity, timestamp, lease, round.ID, mType, status)
 
 	// Attempt a lookup on the MessageID if it is non-zero to find an existing
 	// entry for it. This occurs any time a sender receives their own message
@@ -189,9 +189,9 @@ func (w *wasmModel) ReceiveReply(channelID *id.ID,
 	lease time.Duration, round rounds.Round, mType channels.MessageType,
 	status channels.SentStatus) uint64 {
 
-	msgToInsert := buildMessage(channelID.Marshal(),
-		messageID.Bytes(), replyTo.Bytes(), nickname, text, identity,
-		timestamp, lease, mType, status, round.ID)
+	msgToInsert := buildMessage(channelID.Marshal(), messageID.Bytes(),
+		replyTo.Bytes(), nickname, text, identity, timestamp, lease, round.ID,
+		mType, status)
 
 	// Attempt a lookup on the MessageID if it is non-zero to find an existing
 	// entry for it. This occurs any time a sender receives their own message
@@ -224,11 +224,10 @@ func (w *wasmModel) ReceiveReaction(channelID *id.ID,
 	nickname, reaction string, identity cryptoChannel.Identity,
 	timestamp time.Time, lease time.Duration, round rounds.Round,
 	mType channels.MessageType, status channels.SentStatus) uint64 {
-	parentErr := errors.New("failed to ReceiveReaction")
 
-	msgToInsert := buildMessage(channelID.Marshal(),
-		messageID.Bytes(), reactionTo.Bytes(), nickname, reaction, identity,
-		timestamp, lease, mType, status, round.ID)
+	msgToInsert := buildMessage(channelID.Marshal(), messageID.Bytes(),
+		reactionTo.Bytes(), nickname, reaction, identity, timestamp, lease,
+		round.ID, mType, status)
 
 	// Attempt a lookup on the MessageID if it is non-zero to find
 	// an existing entry for it. This occurs any time a sender
@@ -243,15 +242,16 @@ func (w *wasmModel) ReceiveReaction(channelID *id.ID,
 
 	uuid, err := w.receiveHelper(msgToInsert)
 	if err != nil {
-		jww.ERROR.Printf("%+v", errors.Wrap(parentErr, err.Error()))
+		jww.ERROR.Printf("Failed to receive reaction: %+v", err)
 	}
 	go w.receivedMessageCB(uuid, channelID)
 	return uuid
 }
 
-// UpdateSentStatus is called whenever the [channels.SentStatus] of a
-// message has changed. At this point the message ID goes from
-// empty/unknown to populated.
+// UpdateSentStatus is called whenever the [channels.SentStatus] of a message
+// has changed. At this point the message ID goes from empty/unknown to
+// populated.
+//
 // TODO: Potential race condition due to separate get/update operations.
 func (w *wasmModel) UpdateSentStatus(uuid uint64, messageID cryptoChannel.MessageID,
 	timestamp time.Time, round rounds.Round, status channels.SentStatus) {
@@ -299,10 +299,10 @@ func (w *wasmModel) UpdateSentStatus(uuid uint64, messageID cryptoChannel.Messag
 //       autoincrement key by default. If you are trying to overwrite
 //       an existing message, then you need to set it manually
 //       yourself.
-func buildMessage(channelID, messageID, parentID []byte, nickname,
-	text string, identity cryptoChannel.Identity, timestamp time.Time,
-	lease time.Duration, mType channels.MessageType,
-	status channels.SentStatus, round id.Round) *Message {
+func buildMessage(channelID, messageID, parentID []byte, nickname, text string,
+	identity cryptoChannel.Identity, timestamp time.Time, lease time.Duration,
+	round id.Round, mType channels.MessageType,
+	status channels.SentStatus) *Message {
 	return &Message{
 		MessageID:       messageID,
 		Nickname:        nickname,

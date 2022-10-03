@@ -872,6 +872,7 @@ func (em *eventModel) LeaveChannel(channelID []byte) {
 //    since unix epoch (int).
 //  - lease - The number of nanoseconds that the message is valid for (int).
 //  - roundId - The ID of the round that the message was received on (int).
+//  - msgType - The type of message ([channels.MessageType]) to send (int).
 //  - status - The [channels.SentStatus] of the message (int).
 //
 // Statuses will be enumerated as such:
@@ -883,10 +884,12 @@ func (em *eventModel) LeaveChannel(channelID []byte) {
 //  - A non-negative unique UUID for the message that it can be referenced by
 //    later with [eventModel.UpdateSentStatus].
 func (em *eventModel) ReceiveMessage(channelID, messageID []byte, nickname,
-	text string, identity []byte, timestamp, lease, roundId, status int64) int64 {
+	text string, identity []byte, timestamp, lease, roundId, msgType,
+	status int64) int64 {
 	uuid := em.receiveMessage(utils.CopyBytesToJS(channelID),
 		utils.CopyBytesToJS(messageID), nickname, text,
-		utils.CopyBytesToJS(identity), timestamp, lease, roundId, status)
+		utils.CopyBytesToJS(identity),
+		timestamp, lease, roundId, msgType, status)
 
 	return int64(uuid.Int())
 }
@@ -911,6 +914,7 @@ func (em *eventModel) ReceiveMessage(channelID, messageID []byte, nickname,
 //    since unix epoch (int).
 //  - lease - The number of nanoseconds that the message is valid for (int).
 //  - roundId - The ID of the round that the message was received on (int).
+//  - msgType - The type of message ([channels.MessageType]) to send (int).
 //  - status - The [channels.SentStatus] of the message (int).
 //
 // Statuses will be enumerated as such:
@@ -923,11 +927,11 @@ func (em *eventModel) ReceiveMessage(channelID, messageID []byte, nickname,
 //    later with [eventModel.UpdateSentStatus].
 func (em *eventModel) ReceiveReply(channelID, messageID, reactionTo []byte,
 	senderUsername, text string, identity []byte, timestamp, lease, roundId,
-	status int64) int64 {
+	msgType, status int64) int64 {
 	uuid := em.receiveReply(utils.CopyBytesToJS(channelID),
 		utils.CopyBytesToJS(messageID), utils.CopyBytesToJS(reactionTo),
 		senderUsername, text, utils.CopyBytesToJS(identity),
-		timestamp, lease, roundId, status)
+		timestamp, lease, roundId, msgType, status)
 
 	return int64(uuid.Int())
 }
@@ -952,6 +956,7 @@ func (em *eventModel) ReceiveReply(channelID, messageID, reactionTo []byte,
 //    since unix epoch (int).
 //  - lease - The number of nanoseconds that the message is valid for (int).
 //  - roundId - The ID of the round that the message was received on (int).
+//  - msgType - The type of message ([channels.MessageType]) to send (int).
 //  - status - The [channels.SentStatus] of the message (int).
 //
 // Statuses will be enumerated as such:
@@ -964,11 +969,11 @@ func (em *eventModel) ReceiveReply(channelID, messageID, reactionTo []byte,
 //    later with [eventModel.UpdateSentStatus].
 func (em *eventModel) ReceiveReaction(channelID, messageID, reactionTo []byte,
 	senderUsername, reaction string, identity []byte, timestamp, lease, roundId,
-	status int64) int64 {
+	msgType, status int64) int64 {
 	uuid := em.receiveReaction(utils.CopyBytesToJS(channelID),
 		utils.CopyBytesToJS(messageID), utils.CopyBytesToJS(reactionTo),
 		senderUsername, reaction, utils.CopyBytesToJS(identity),
-		timestamp, lease, roundId, status)
+		timestamp, lease, roundId, msgType, status)
 
 	return int64(uuid.Int())
 }
