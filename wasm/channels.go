@@ -235,7 +235,8 @@ func LoadChannelsManager(_ js.Value, args []js.Value) interface{} {
 //    returned as an int and the channelID as a Uint8Array. The row in the
 //    database that was updated can be found using the UUID. The channel ID is
 //    provided so that the recipient can filter if they want to the processes
-//    the update now or not.
+//    the update now or not. An "update" bool is present which tells you if
+//	  the row is new or if it is an edited old row
 //
 // Returns a promise:
 //  - Resolves to a Javascript representation of the [ChannelsManager] object.
@@ -244,8 +245,8 @@ func NewChannelsManagerWithIndexedDb(_ js.Value, args []js.Value) interface{} {
 	cmixID := args[0].Int()
 	privateIdentity := utils.CopyBytesToGo(args[1])
 
-	fn := func(uuid uint64, channelID *id.ID) {
-		args[2].Invoke(uuid, utils.CopyBytesToJS(channelID.Marshal()))
+	fn := func(uuid uint64, channelID *id.ID, update bool) {
+		args[2].Invoke(uuid, utils.CopyBytesToJS(channelID.Marshal()), update)
 	}
 
 	model := indexedDb.NewWASMEventModelBuilder(fn)
@@ -281,7 +282,8 @@ func NewChannelsManagerWithIndexedDb(_ js.Value, args []js.Value) interface{} {
 //    returned as an int and the channelID as a Uint8Array. The row in the
 //    database that was updated can be found using the UUID. The channel ID is
 //    provided so that the recipient can filter if they want to the processes
-//    the update now or not.
+//    the update now or not. An "update" bool is present which tells you if
+//	  the row is new or if it is an edited old row
 //
 // Returns a promise:
 //  - Resolves to a Javascript representation of the [ChannelsManager] object.
@@ -290,8 +292,8 @@ func LoadChannelsManagerWithIndexedDb(_ js.Value, args []js.Value) interface{} {
 	cmixID := args[0].Int()
 	storageTag := args[1].String()
 
-	fn := func(uuid uint64, channelID *id.ID) {
-		args[2].Invoke(uuid, utils.CopyBytesToJS(channelID.Marshal()))
+	fn := func(uuid uint64, channelID *id.ID, updated bool) {
+		args[2].Invoke(uuid, utils.CopyBytesToJS(channelID.Marshal()), updated)
 	}
 
 	model := indexedDb.NewWASMEventModelBuilder(fn)

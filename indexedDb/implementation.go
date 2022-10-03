@@ -173,7 +173,7 @@ func (w *wasmModel) ReceiveMessage(channelID *id.ID,
 		jww.ERROR.Printf("Failed to receiver message: %+v", err)
 	}
 
-	go w.receivedMessageCB(uuid, channelID)
+	go w.receivedMessageCB(uuid, channelID, false)
 	return uuid
 }
 
@@ -209,7 +209,7 @@ func (w *wasmModel) ReceiveReply(channelID *id.ID,
 	if err != nil {
 		jww.ERROR.Printf("Failed to receive reply: %+v", err)
 	}
-	go w.receivedMessageCB(uuid, channelID)
+	go w.receivedMessageCB(uuid, channelID, false)
 	return uuid
 }
 
@@ -244,7 +244,7 @@ func (w *wasmModel) ReceiveReaction(channelID *id.ID,
 	if err != nil {
 		jww.ERROR.Printf("Failed to receive reaction: %+v", err)
 	}
-	go w.receivedMessageCB(uuid, channelID)
+	go w.receivedMessageCB(uuid, channelID, false)
 	return uuid
 }
 
@@ -298,7 +298,7 @@ func (w *wasmModel) UpdateSentStatus(uuid uint64, messageID cryptoChannel.Messag
 	}
 	channelID := &id.ID{}
 	copy(channelID[:], newMessage.ChannelID)
-	go w.receivedMessageCB(uuid, channelID)
+	go w.receivedMessageCB(uuid, channelID, true)
 }
 
 // buildMessage is a private helper that converts typical [channels.EventModel]
