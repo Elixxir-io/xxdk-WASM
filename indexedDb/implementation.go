@@ -152,12 +152,12 @@ func (w *wasmModel) ReceiveMessage(channelID *id.ID,
 	messageID cryptoChannel.MessageID,
 	nickname, text string, identity cryptoChannel.Identity,
 	timestamp time.Time, lease time.Duration, round rounds.Round,
-	status channels.SentStatus) uint64 {
+	mtype channels.MessageType, status channels.SentStatus) uint64 {
 	parentErr := errors.New("failed to ReceiveMessage")
 
 	msgToInsert := buildMessage(channelID.Marshal(),
 		messageID.Bytes(), nil, nickname, text, identity,
-		timestamp, lease, status)
+		timestamp, lease, mtype, status)
 
 	// Attempt a lookup on the MessageID if it is non-zero to find
 	// an existing entry for it. This occurs any time a sender
@@ -165,10 +165,9 @@ func (w *wasmModel) ReceiveMessage(channelID *id.ID,
 	if !messageID.Equals(cryptoChannel.MessageID{}) {
 		uuid, err := w.msgIDLookup(messageID)
 		if err != nil {
-			// NOTE: No stack is OK here
-			jww.WARN.Printf(err.Error())
+			//message is already in the database, no insert necessary
+			return uuid
 		}
-		msgToInsert.ID = uuid
 	}
 
 	uuid, err := w.receiveHelper(msgToInsert)
@@ -190,12 +189,28 @@ func (w *wasmModel) ReceiveReply(channelID *id.ID,
 	messageID cryptoChannel.MessageID,
 	replyTo cryptoChannel.MessageID, nickname, text string,
 	identity cryptoChannel.Identity, timestamp time.Time,
-	lease time.Duration, round rounds.Round, status channels.SentStatus) uint64 {
+	lease time.Duration, round rounds.Round, mtype channels.MessageType,
+	status channels.SentStatus) uint64 {
+
 	parentErr := errors.New("failed to ReceiveReply")
 
-	uuid, err := w.receiveHelper(buildMessage(channelID.Marshal(),
-		messageID.Bytes(), replyTo.Bytes(), nickname, text, identity,
-		timestamp, lease, status))
+	msgToInsert := buildMessage(channelID.Marshal(),
+		messageID.Bytes(), nil, nickname, text, identity,
+		timestamp, lease, mtype, status)
+
+	// Attempt a lookup on the MessageID if it is non-zero to find
+	// an existing entry for it. This occurs any time a sender
+	// receives their own message from the mixnet.
+	if !messageID.Equals(cryptoChannel.MessageID{}) {
+		uuid, err := w.msgIDLookup(messageID)
+		if err != nil {
+			//message is already in the database, no insert necessary
+			return uuid
+		}
+	}
+
+	uuid, err := w.receiveHelper(msgToInsert)
+
 	if err != nil {
 		jww.ERROR.Printf("%+v", errors.Wrap(parentErr, err.Error()))
 	}
@@ -212,12 +227,26 @@ func (w *wasmModel) ReceiveReply(channelID *id.ID,
 func (w *wasmModel) ReceiveReaction(channelID *id.ID, messageID cryptoChannel.MessageID,
 	reactionTo cryptoChannel.MessageID, nickname, reaction string,
 	identity cryptoChannel.Identity, timestamp time.Time,
-	lease time.Duration, round rounds.Round, status channels.SentStatus) uint64 {
+	lease time.Duration, round rounds.Round, mtype channels.MessageType,
+	status channels.SentStatus) uint64 {
 	parentErr := errors.New("failed to ReceiveReaction")
 
-	uuid, err := w.receiveHelper(buildMessage(channelID.Marshal(),
-		messageID.Bytes(), reactionTo.Bytes(), nickname, reaction,
-		identity, timestamp, lease, status))
+	msgToInsert := buildMessage(channelID.Marshal(),
+		messageID.Bytes(), nil, nickname, text, identity,
+		timestamp, lease, mtype, status)
+
+	// Attempt a lookup on the MessageID if it is non-zero to find
+	// an existing entry for it. This occurs any time a sender
+	// receives their own message from the mixnet.
+	if !messageID.Equals(cryptoChannel.MessageID{}) {
+		uuid, err := w.msgIDLookup(messageID)
+		if err != nil {
+			//message is already in the database, no insert necessary
+			return uuid
+		}
+	}
+
+	uuid, err := w.receiveHelper(msgToInsert)
 	if err != nil {
 		jww.ERROR.Printf("%+v", errors.Wrap(parentErr, err.Error()))
 	}
@@ -276,7 +305,7 @@ func (w *wasmModel) UpdateSentStatus(uuid uint64, messageID cryptoChannel.Messag
 func buildMessage(channelID, messageID, parentID []byte, nickname,
 	text string, identity cryptoChannel.Identity, timestamp time.Time,
 	lease time.Duration,
-	status channels.SentStatus) *Message {
+	status channels.SentStatus, mType channels.MessageType) *Message {
 	return &Message{
 		MessageID:       messageID,
 		Nickname:        nickname,
@@ -288,6 +317,7 @@ func buildMessage(channelID, messageID, parentID []byte, nickname,
 		Hidden:          false,
 		Pinned:          false,
 		Text:            text,
+		Type:            uint16(mType),
 		// User Identity Info
 		Pubkey:         []byte(identity.PubKey),
 		Codename:       identity.Codename,
