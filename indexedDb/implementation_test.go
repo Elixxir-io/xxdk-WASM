@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func dummyCallback(uint64, *id.ID) {}
+func dummyCallback(uint64, *id.ID, bool) {}
 
 // Test wasmModel.UpdateSentStatus happy path and ensure fields don't change.
 func TestWasmModel_UpdateSentStatus(t *testing.T) {
