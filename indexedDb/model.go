@@ -59,6 +59,7 @@ type Message struct {
 	Pinned          bool          `json:"pinned"` // Index
 	Text            string        `json:"text"`
 	Type            uint16        `json:"type"`
+	Round           uint64        `json:"round"`
 
 	// User cryptographic IDentity struct -- could be pulled out
 	Pubkey []byte `json:"pubkey"` // Index

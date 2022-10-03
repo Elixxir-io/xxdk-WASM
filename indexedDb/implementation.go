@@ -151,11 +151,11 @@ func (w *wasmModel) LeaveChannel(channelID *id.ID) {
 func (w *wasmModel) ReceiveMessage(channelID *id.ID,
 	messageID cryptoChannel.MessageID, nickname, text string,
 	identity cryptoChannel.Identity, timestamp time.Time, lease time.Duration,
-	_ rounds.Round, mType channels.MessageType, status channels.SentStatus) uint64 {
+	round rounds.Round, mType channels.MessageType, status channels.SentStatus) uint64 {
 
 	msgToInsert := buildMessage(channelID.Marshal(),
 		messageID.Bytes(), nil, nickname, text, identity,
-		timestamp, lease, mType, status)
+		timestamp, lease, mType, status, round.ID)
 
 	// Attempt a lookup on the MessageID if it is non-zero to find an existing
 	// entry for it. This occurs any time a sender receives their own message
@@ -186,12 +186,12 @@ func (w *wasmModel) ReceiveMessage(channelID *id.ID,
 func (w *wasmModel) ReceiveReply(channelID *id.ID,
 	messageID cryptoChannel.MessageID, replyTo cryptoChannel.MessageID,
 	nickname, text string, identity cryptoChannel.Identity, timestamp time.Time,
-	lease time.Duration, _ rounds.Round, mType channels.MessageType,
+	lease time.Duration, round rounds.Round, mType channels.MessageType,
 	status channels.SentStatus) uint64 {
 
 	msgToInsert := buildMessage(channelID.Marshal(),
 		messageID.Bytes(), replyTo.Bytes(), nickname, text, identity,
-		timestamp, lease, mType, status)
+		timestamp, lease, mType, status, round.ID)
 
 	// Attempt a lookup on the MessageID if it is non-zero to find an existing
 	// entry for it. This occurs any time a sender receives their own message
@@ -228,7 +228,7 @@ func (w *wasmModel) ReceiveReaction(channelID *id.ID,
 
 	msgToInsert := buildMessage(channelID.Marshal(),
 		messageID.Bytes(), reactionTo.Bytes(), nickname, reaction, identity,
-		timestamp, lease, mType, status)
+		timestamp, lease, mType, status, round.ID)
 
 	// Attempt a lookup on the MessageID if it is non-zero to find
 	// an existing entry for it. This occurs any time a sender
@@ -280,6 +280,8 @@ func (w *wasmModel) UpdateSentStatus(uuid uint64, messageID cryptoChannel.Messag
 	}
 	newMessage.Status = uint8(status)
 	newMessage.MessageID = messageID.Bytes()
+	newMessage.Round = uint64(round.ID)
+	newMessage.Timestamp = timestamp
 
 	// Store the updated Message
 	_, err = w.receiveHelper(newMessage)
@@ -300,7 +302,7 @@ func (w *wasmModel) UpdateSentStatus(uuid uint64, messageID cryptoChannel.Messag
 func buildMessage(channelID, messageID, parentID []byte, nickname,
 	text string, identity cryptoChannel.Identity, timestamp time.Time,
 	lease time.Duration, mType channels.MessageType,
-	status channels.SentStatus) *Message {
+	status channels.SentStatus, round id.Round) *Message {
 	return &Message{
 		MessageID:       messageID,
 		Nickname:        nickname,
@@ -313,6 +315,7 @@ func buildMessage(channelID, messageID, parentID []byte, nickname,
 		Pinned:          false,
 		Text:            text,
 		Type:            uint16(mType),
+		Round:           uint64(round),
 		// User Identity Info
 		Pubkey:         identity.PubKey,
 		Codename:       identity.Codename,
