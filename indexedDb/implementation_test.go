@@ -29,7 +29,7 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func dummyCallback(uuid uint64, channelID *id.ID) {}
+func dummyCallback(uint64, *id.ID) {}
 
 // Test wasmModel.UpdateSentStatus happy path and ensure fields don't change.
 func TestWasmModel_UpdateSentStatus(t *testing.T) {
@@ -148,7 +148,7 @@ func TestWasmModel_UUIDTest(t *testing.T) {
 		// Store a test message
 		channelID := id.NewIdFromBytes([]byte(testString), t)
 		msgID := channel.MessageID{}
-		copy(msgID[:], []byte(testString+fmt.Sprintf("%d", i)))
+		copy(msgID[:], testString+fmt.Sprintf("%d", i))
 		rnd := rounds.Round{ID: id.Round(42)}
 		uuid := eventModel.ReceiveMessage(channelID, msgID,
 			"test", testString+fmt.Sprintf("%d", i), cid, time.Now(),
@@ -156,7 +156,7 @@ func TestWasmModel_UUIDTest(t *testing.T) {
 		uuids[i] = uuid
 	}
 
-	eventModel.dump(messageStoreName)
+	_, _ = eventModel.dump(messageStoreName)
 
 	for i := 0; i < 10; i++ {
 		for j := i + 1; j < 10; j++ {
