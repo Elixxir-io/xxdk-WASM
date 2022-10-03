@@ -34,7 +34,7 @@ func dummyCallback(uint64, *id.ID) {}
 // Test wasmModel.UpdateSentStatus happy path and ensure fields don't change.
 func TestWasmModel_UpdateSentStatus(t *testing.T) {
 	testString := "test"
-	testMsgId := channel.MakeMessageID([]byte(testString))
+	testMsgId := channel.MakeMessageID([]byte(testString), &id.ID{1})
 	eventModel, err := newWASMModel(testString, dummyCallback)
 	if err != nil {
 		t.Fatalf("%+v", err)
