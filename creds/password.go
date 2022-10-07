@@ -15,6 +15,7 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 	"gitlab.com/elixxir/xxdk-wasm/utils"
 	"gitlab.com/xx_network/crypto/csprng"
+	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/chacha20poly1305"
 	"io"
@@ -26,22 +27,37 @@ const (
 	// Length of the internal password (256-bit)
 	internalPasswordLen = 32
 
+	// Key used to store the encrypted internal password salt in local storage
+	saltKey = "xxInternalPasswordSalt"
+
 	// Key used to store the encrypted internal password in local storage
 	passwordKey = "xxEncryptedInternalPassword"
+
+	// keyLen is the length of the key generated
+	keyLen = chacha20poly1305.KeySize
+
+	// saltLen is the length of the salt. Recommended to be 16 bytes here:
+	// https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-argon2-04#section-3.1
+	saltLen = 16
 )
 
 // Error messages.
 const (
 	// getInternalPassword
 	getPasswordStorageErr = "could not retrieve encrypted internal password from storage: %+v"
+	getSaltStorageErr     = "could not retrieve salt from storage: %+v"
 	decryptPasswordErr    = "could not decrypt internal password: %+v"
 
 	// initInternalPassword
 	readInternalPasswordErr     = "could not generate internal password: %+v"
 	internalPasswordNumBytesErr = "expected %d bytes for internal password, found %d bytes"
+
 	// decryptPassword
 	readNonceLenErr        = "read %d bytes, too short to decrypt"
 	decryptWithPasswordErr = "cannot decrypt with password: %+v"
+
+	readSaltErr     = "could not generate salt: %+v"
+	saltNumBytesErr = "expected %d bytes for salt, found %d bytes"
 )
 
 // GetOrInitJS takes a user-provided password and returns its associated 256-bit
@@ -120,8 +136,16 @@ func ChangeExternalPassword(oldExternalPassword, newExternalPassword string) err
 		return err
 	}
 
+	salt, err := makeSalt(csprng.NewSystemRNG())
+	if err != nil {
+		return err
+	}
+	localStorage.SetItem(saltKey, salt)
+
+	key := deriveKey(newExternalPassword, salt, defaultParams())
+
 	encryptedInternalPassword := encryptPassword(
-		internalPassword, newExternalPassword, csprng.NewSystemRNG())
+		internalPassword, key, csprng.NewSystemRNG())
 	localStorage.SetItem(passwordKey, encryptedInternalPassword)
 
 	return nil
@@ -141,8 +165,15 @@ func initInternalPassword(externalPassword string,
 			internalPasswordNumBytesErr, internalPasswordLen, n)
 	}
 
-	encryptedInternalPassword := encryptPassword(
-		internalPassword, externalPassword, csprng)
+	salt, err := makeSalt(csprng)
+	if err != nil {
+		return nil, err
+	}
+	localStorage.SetItem(saltKey, salt)
+
+	key := deriveKey(externalPassword, salt, defaultParams())
+
+	encryptedInternalPassword := encryptPassword(internalPassword, key, csprng)
 	localStorage.SetItem(passwordKey, encryptedInternalPassword)
 
 	return internalPassword, nil
@@ -157,8 +188,15 @@ func getInternalPassword(
 		return nil, errors.WithMessage(err, getPasswordStorageErr)
 	}
 
+	salt, err := localStorage.GetItem(saltKey)
+	if err != nil {
+		return nil, errors.WithMessage(err, getSaltStorageErr)
+	}
+
+	key := deriveKey(externalPassword, salt, defaultParams())
+
 	decryptedInternalPassword, err :=
-		decryptPassword(encryptedInternalPassword, externalPassword)
+		decryptPassword(encryptedInternalPassword, key)
 	if err != nil {
 		return nil, errors.Errorf(decryptPasswordErr, err)
 	}
@@ -167,7 +205,7 @@ func getInternalPassword(
 }
 
 // encryptPassword encrypts the data for a shared URL using XChaCha20-Poly1305.
-func encryptPassword(data []byte, password string, csprng io.Reader) []byte {
+func encryptPassword(data, password []byte, csprng io.Reader) []byte {
 	chaCipher := initChaCha20Poly1305(password)
 	nonce := make([]byte, chaCipher.NonceSize())
 	if _, err := io.ReadFull(csprng, nonce); err != nil {
@@ -179,7 +217,7 @@ func encryptPassword(data []byte, password string, csprng io.Reader) []byte {
 
 // decryptPassword decrypts the encrypted data from a shared URL using
 // XChaCha20-Poly1305.
-func decryptPassword(data []byte, password string) ([]byte, error) {
+func decryptPassword(data, password []byte) ([]byte, error) {
 	chaCipher := initChaCha20Poly1305(password)
 	nonceLen := chaCipher.NonceSize()
 	if (len(data) - nonceLen) <= 0 {
@@ -195,12 +233,48 @@ func decryptPassword(data []byte, password string) ([]byte, error) {
 
 // initChaCha20Poly1305 returns a XChaCha20-Poly1305 cipher.AEAD that uses the
 // given password hashed into a 256-bit key.
-func initChaCha20Poly1305(password string) cipher.AEAD {
-	pwHash := blake2b.Sum256([]byte(password))
+func initChaCha20Poly1305(password []byte) cipher.AEAD {
+	pwHash := blake2b.Sum256(password)
 	chaCipher, err := chacha20poly1305.NewX(pwHash[:])
 	if err != nil {
 		jww.FATAL.Panicf("Could not init XChaCha20Poly1305 mode: %+v", err)
 	}
 
 	return chaCipher
+}
+
+// argonParams contains the cost parameters used by Argon2.
+type argonParams struct {
+	Time    uint32 // Number of passes over the memory
+	Memory  uint32 // Amount of memory used in KiB
+	Threads uint8  // Number of threads used
+}
+
+// defaultParams returns the recommended general purposes parameters.
+func defaultParams() argonParams {
+	return argonParams{
+		Time:    1,
+		Memory:  64 * 1024, // ~64 MB
+		Threads: 4,
+	}
+}
+
+// deriveKey derives a key from a user supplied password and a salt via the
+// Argon2 algorithm.
+func deriveKey(password string, salt []byte, params argonParams) []byte {
+	return argon2.IDKey([]byte(password), salt,
+		params.Time, params.Memory, params.Threads, keyLen)
+}
+
+// makeSalt generates a salt of the correct length of key generation.
+func makeSalt(csprng io.Reader) ([]byte, error) {
+	b := make([]byte, saltLen)
+	size, err := csprng.Read(b)
+	if err != nil {
+		return nil, errors.Errorf(readSaltErr, err)
+	} else if size != saltLen {
+		return nil, errors.Errorf(saltNumBytesErr, size, saltLen)
+	}
+
+	return b, nil
 }
