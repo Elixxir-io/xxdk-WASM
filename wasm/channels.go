@@ -34,11 +34,15 @@ func newChannelsManagerJS(api *bindings.ChannelsManager) map[string]interface{} 
 	cm := ChannelsManager{api}
 	channelsManagerMap := map[string]interface{}{
 		// Basic Channel API
-		"GetID":         js.FuncOf(cm.GetID),
-		"JoinChannel":   js.FuncOf(cm.JoinChannel),
-		"GetChannels":   js.FuncOf(cm.GetChannels),
-		"LeaveChannel":  js.FuncOf(cm.LeaveChannel),
-		"ReplayChannel": js.FuncOf(cm.ReplayChannel),
+		"GetID":              js.FuncOf(cm.GetID),
+		"JoinChannel":        js.FuncOf(cm.JoinChannel),
+		"JoinChannelFromURL": js.FuncOf(cm.JoinChannelFromURL),
+		"GetChannels":        js.FuncOf(cm.GetChannels),
+		"LeaveChannel":       js.FuncOf(cm.LeaveChannel),
+		"ReplayChannel":      js.FuncOf(cm.ReplayChannel),
+
+		// Share URL
+		"GetShareURL": js.FuncOf(cm.GetShareURL),
 
 		// Channel Sending Methods and Reports
 		"SendGeneric":      js.FuncOf(cm.SendGeneric),
@@ -327,15 +331,28 @@ func LoadChannelsManagerWithIndexedDb(_ js.Value, args []js.Value) interface{} {
 //  - args[2] - The description of a channel. The description cannot be longer
 //    than __ characters and must contain only __ characters. It cannot be
 //    changed once a channel is created (string).
+//  - args[3] - The [broadcast.PrivacyLevel] of the channel (int). 0 = public,
+//    1 = private, and 2 = secret. Refer to the comment below for more
+//    information.
 //
 // Returns:
 //  - JSON of [bindings.ChannelGeneration], which describes a generated channel.
 //    It contains both the public channel info and the private key for the
 //    channel in PEM format (Uint8Array).
 //  - Throws a TypeError if generating the channel fails.
+//
+// The [broadcast.PrivacyLevel] of a channel indicates the level of channel
+// information revealed when sharing it via URL. For any channel besides public
+// channels, the secret information is encrypted and a password is required to
+// share and join a channel.
+//  - A privacy level of [broadcast.Public] reveals all the information
+//    including the name, description, privacy level, public key and salt.
+//  - A privacy level of [broadcast.Private] reveals only the name and
+//    description.
+//  - A privacy level of [broadcast.Secret] reveals nothing.
 func GenerateChannel(_ js.Value, args []js.Value) interface{} {
 	gen, err := bindings.GenerateChannel(
-		args[0].Int(), args[1].String(), args[2].String())
+		args[0].Int(), args[1].String(), args[2].String(), args[3].Int())
 	if err != nil {
 		utils.Throw(utils.TypeError, err)
 		return nil
@@ -382,6 +399,32 @@ func GetChannelInfo(_ js.Value, args []js.Value) interface{} {
 //  - Throws a TypeError if joining the channel fails.
 func (ch *ChannelsManager) JoinChannel(_ js.Value, args []js.Value) interface{} {
 	ci, err := ch.api.JoinChannel(args[0].String())
+	if err != nil {
+		utils.Throw(utils.TypeError, err)
+		return nil
+	}
+
+	return utils.CopyBytesToJS(ci)
+}
+
+// JoinChannelFromURL joins the given channel from a URL. It will fail if the
+// channel has already been joined. A password is required unless it is of the
+// privacy level [broadcast.Public], in which case it can be left empty. To get
+// the privacy level of a channel URL, use [GetShareUrlType].
+//
+// Parameters:
+//  - args[0] - The channel's share URL. Should be received from another user
+//    or generated via [GetShareURL] (string).
+//  - args[1] - The password needed to decrypt the secret data in the URL
+//    (string). Only required for private or secret channels. Use empty string
+//    ("") for public channels.
+//
+// Returns:
+//  - JSON of [bindings.ChannelInfo], which describes all relevant channel info
+//    (Uint8Array).
+//  - Throws a TypeError if joining the channel fails.
+func (ch *ChannelsManager) JoinChannelFromURL(_ js.Value, args []js.Value) interface{} {
+	ci, err := ch.api.JoinChannelFromURL(args[0].String(), args[1].String())
 	if err != nil {
 		utils.Throw(utils.TypeError, err)
 		return nil
@@ -449,6 +492,68 @@ func (ch *ChannelsManager) ReplayChannel(_ js.Value, args []js.Value) interface{
 	}
 
 	return nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Channel Share URL                                                          //
+////////////////////////////////////////////////////////////////////////////////
+
+type ShareURL struct {
+	URL      string `json:"url"`
+	Password string `json:"password"`
+}
+
+// GetShareURL generates a URL that can be used to share this channel with
+// others on the given host.
+//
+// A URL comes in one of three forms based on the privacy level set when
+// generating the channel. Each privacy level hides more information than the
+// last with the lowest level revealing everything and the highest level
+// revealing nothing. For any level above the lowest, a password is returned,
+// which will be required when decoding the URL.
+//
+// Parameters:
+//  - args[0] - ID of [Cmix] object in tracker (int).
+//  - args[1] - The URL to append the channel info to (string).
+//  - args[2] - Marshalled bytes of the channel [id.ID] (Uint8Array).
+//
+// Returns:
+//  - JSON of [bindings.ShareURL] (Uint8Array).
+//  - Throws a TypeError if generating the URL fails.
+func (ch *ChannelsManager) GetShareURL(_ js.Value, args []js.Value) interface{} {
+	marshalledChanId := utils.CopyBytesToGo(args[2])
+
+	su, err := ch.api.GetShareURL(args[0].Int(), args[1].String(), marshalledChanId)
+	if err != nil {
+		utils.Throw(utils.TypeError, err)
+		return nil
+	}
+
+	return utils.CopyBytesToJS(su)
+}
+
+// GetShareUrlType determines the [broadcast.PrivacyLevel] of the channel URL.
+// If the URL is an invalid channel URL, an error is returned.
+//
+// Parameters:
+//  - args[0] - The channel share URL (string).
+//
+// Returns:
+//  - An int that corresponds to the [broadcast.PrivacyLevel] as outlined below.
+//  - Throws a TypeError if parsing the URL fails.
+//
+// Possible returns:
+//  0 = public channel
+//  1 = private channel
+//  2 = secret channel
+func GetShareUrlType(_ js.Value, args []js.Value) interface{} {
+	level, err := bindings.GetShareUrlType(args[0].String())
+	if err != nil {
+		utils.Throw(utils.TypeError, err)
+		return nil
+	}
+
+	return level
 }
 
 ////////////////////////////////////////////////////////////////////////////////
