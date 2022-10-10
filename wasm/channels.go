@@ -415,6 +415,32 @@ func (ch *ChannelsManager) JoinChannel(_ js.Value, args []js.Value) interface{} 
 //
 // Parameters:
 //  - args[0] - The channel's share URL. Should be received from another user
+//    or generated via [GetShareURL] (string).
+//  - args[1] - The password needed to decrypt the secret data in the URL
+//    (string). Only required for private or secret channels. Use empty string
+//    ("") for public channels.
+//
+// Returns:
+//  - JSON of [bindings.ChannelInfo], which describes all relevant channel info
+//    (Uint8Array).
+//  - Throws a TypeError if joining the channel fails.
+func (ch *ChannelsManager) JoinChannelFromURL(_ js.Value, args []js.Value) interface{} {
+	ci, err := ch.api.JoinChannelFromURL(args[0].String(), args[1].String())
+	if err != nil {
+		utils.Throw(utils.TypeError, err)
+		return nil
+	}
+
+	return utils.CopyBytesToJS(ci)
+}
+
+// JoinChannelFromURL joins the given channel from a URL. It will fail if the
+// channel has already been joined. A password is required unless it is of the
+// privacy level [broadcast.Public], in which case it can be left empty. To get
+// the privacy level of a channel URL, use [GetShareUrlType].
+//
+// Parameters:
+//  - args[0] - The channel's share URL. Should be received from another user
 //    or generated via [ChannelsManager.GetShareURL] (string).
 //  - args[1] - The password needed to decrypt the secret data in the URL
 //    (string). Only required for private or secret channels. Use empty string
