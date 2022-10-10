@@ -273,7 +273,7 @@ func makeSalt(csprng io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Errorf(readSaltErr, err)
 	} else if size != saltLen {
-		return nil, errors.Errorf(saltNumBytesErr, size, saltLen)
+		return nil, errors.Errorf(saltNumBytesErr, saltLen, size)
 	}
 
 	return b, nil

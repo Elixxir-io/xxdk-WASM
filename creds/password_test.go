@@ -113,6 +113,39 @@ func Test_initInternalPassword(t *testing.T) {
 	}
 }
 
+// Tests that initInternalPassword returns an error when the RNG returns an
+// error when read.
+func Test_initInternalPassword_CsprngReadError(t *testing.T) {
+	externalPassword := "myPassword"
+	ls := utils.GetLocalStorage()
+	b := bytes.NewBuffer([]byte{})
+
+	expectedErr := strings.Split(readInternalPasswordErr, "%")[0]
+
+	_, err := initInternalPassword(externalPassword, ls, b)
+	if err == nil || !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Unexpected error when RNG returns a read error."+
+			"\nexpected: %s\nreceived: %+v", expectedErr, err)
+	}
+}
+
+// Tests that initInternalPassword returns  an error when the RNG does not
+// return enough bytes.
+func Test_initInternalPassword_CsprngReadNumBytesError(t *testing.T) {
+	externalPassword := "myPassword"
+	ls := utils.GetLocalStorage()
+	b := bytes.NewBuffer(make([]byte, internalPasswordLen/2))
+
+	expectedErr := fmt.Sprintf(
+		internalPasswordNumBytesErr, internalPasswordLen, internalPasswordLen/2)
+
+	_, err := initInternalPassword(externalPassword, ls, b)
+	if err == nil || !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Unexpected error when RNG does not return enough bytes."+
+			"\nexpected: %s\nreceived: %+v", expectedErr, err)
+	}
+}
+
 // Tests that getInternalPassword returns the internal password that is saved
 // to local storage by initInternalPassword.
 func Test_getInternalPassword(t *testing.T) {
@@ -134,6 +167,57 @@ func Test_getInternalPassword(t *testing.T) {
 		t.Errorf("Internal password from storage does not match original."+
 			"\nexpected: %+v\nreceived: %+v",
 			internalPassword, loadedInternalPassword)
+	}
+}
+
+// Tests that getInternalPassword returns an error when the password cannot be
+// loaded from local storage.
+func Test_getInternalPassword_LocalStorageGetPasswordError(t *testing.T) {
+	externalPassword := "myPassword"
+	ls := utils.GetLocalStorage()
+	ls.Clear()
+
+	expectedErr := strings.Split(getPasswordStorageErr, "%")[0]
+
+	_, err := getInternalPassword(externalPassword, ls)
+	if err == nil || !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Unexpected error when password cannot be loaded from storage."+
+			"\nexpected: %s\nreceived: %+v", expectedErr, err)
+	}
+}
+
+// Tests that getInternalPassword returns an error when the salt cannot be
+// loaded from local storage.
+func Test_getInternalPassword_LocalStorageGetError(t *testing.T) {
+	externalPassword := "myPassword"
+	ls := utils.GetLocalStorage()
+	ls.Clear()
+	ls.SetItem(passwordKey, []byte("password"))
+
+	expectedErr := strings.Split(getSaltStorageErr, "%")[0]
+
+	_, err := getInternalPassword(externalPassword, ls)
+	if err == nil || !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Unexpected error when salt cannot be loaded from storage."+
+			"\nexpected: %s\nreceived: %+v", expectedErr, err)
+	}
+}
+
+// Tests that getInternalPassword returns an error when the password cannot be
+// decrypted.
+func Test_getInternalPassword_DecryptPasswordError(t *testing.T) {
+	externalPassword := "myPassword"
+	ls := utils.GetLocalStorage()
+	ls.Clear()
+	ls.SetItem(saltKey, []byte("salt"))
+	ls.SetItem(passwordKey, []byte("password"))
+
+	expectedErr := strings.Split(decryptPasswordErr, "%")[0]
+
+	_, err := getInternalPassword(externalPassword, ls)
+	if err == nil || !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Unexpected error when the password is decrypted."+
+			"\nexpected: %s\nreceived: %+v", expectedErr, err)
 	}
 }
 
@@ -179,7 +263,7 @@ func Test_decryptPassword_ShortData(t *testing.T) {
 // Tests that deriveKey returns a key of the correct length and that it is the
 // same for the same set of password and salt. Also checks that keys with the
 // same salt or passwords do not collide.
-func TestDeriveKey(t *testing.T) {
+func Test_deriveKey(t *testing.T) {
 	p := testParams()
 	salts := make([][]byte, 6)
 	passwords := make([]string, len(salts))
@@ -224,7 +308,7 @@ func TestDeriveKey(t *testing.T) {
 
 // Tests that multiple calls to makeSalt results in unique salts of the
 // specified length.
-func TestMakeSalt(t *testing.T) {
+func Test_makeSalt(t *testing.T) {
 	salts := make(map[string]bool, 50)
 	for i := 0; i < 50; i++ {
 		salt, err := makeSalt(csprng.NewSystemRNG())
@@ -241,6 +325,31 @@ func TestMakeSalt(t *testing.T) {
 			t.Errorf("Salt already exists (%d).", i)
 		}
 		salts[string(salt)] = true
+	}
+}
+
+// Tests that makeSalt returns an error when the RNG returns an error when read.
+func Test_makeSalt_ReadError(t *testing.T) {
+	b := bytes.NewBuffer([]byte{})
+
+	expectedErr := strings.Split(readSaltErr, "%")[0]
+	_, err := makeSalt(b)
+	if err == nil || !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Unexpected error when RNG returns a read error."+
+			"\nexpected: %s\nreceived: %+v", expectedErr, err)
+	}
+}
+
+// Tests that makeSalt returns an error when the RNG does not return enough
+// bytes.
+func Test_makeSalt_ReadNumBytesError(t *testing.T) {
+	b := bytes.NewBuffer(make([]byte, saltLen/2))
+
+	expectedErr := fmt.Sprintf(saltNumBytesErr, saltLen, saltLen/2)
+	_, err := makeSalt(b)
+	if err == nil || !strings.Contains(err.Error(), expectedErr) {
+		t.Errorf("Unexpected error when RNG does not return enough bytes."+
+			"\nexpected: %s\nreceived: %+v", expectedErr, err)
 	}
 }
 
