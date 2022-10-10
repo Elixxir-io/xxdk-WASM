@@ -24,7 +24,7 @@ import (
 	"syscall/js"
 )
 
-// Data lengths
+// Data lengths.
 const (
 	// Length of the internal password (256-bit)
 	internalPasswordLen = 32
@@ -67,6 +67,7 @@ const (
 	readNonceLenErr        = "read %d bytes, too short to decrypt"
 	decryptWithPasswordErr = "cannot decrypt with password: %+v"
 
+	// makeSalt
 	readSaltErr     = "could not generate salt: %+v"
 	saltNumBytesErr = "expected %d bytes for salt, found %d bytes"
 )
