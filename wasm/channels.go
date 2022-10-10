@@ -414,7 +414,7 @@ func (ch *ChannelsManager) JoinChannel(_ js.Value, args []js.Value) interface{} 
 //
 // Parameters:
 //  - args[0] - The channel's share URL. Should be received from another user
-//    or generated via [GetShareURL] (string).
+//    or generated via [ChannelsManager.GetShareURL] (string).
 //  - args[1] - The password needed to decrypt the secret data in the URL
 //    (string). Only required for private or secret channels. Use empty string
 //    ("") for public channels.
