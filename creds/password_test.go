@@ -80,7 +80,8 @@ func Test_initInternalPassword(t *testing.T) {
 	ls := utils.GetLocalStorage()
 	rng := csprng.NewSystemRNG()
 
-	internalPassword, err := initInternalPassword(externalPassword, ls, rng)
+	internalPassword, err := initInternalPassword(
+		externalPassword, ls, rng, defaultParams())
 	if err != nil {
 		t.Errorf("%+v", err)
 	}
@@ -122,7 +123,7 @@ func Test_initInternalPassword_CsprngReadError(t *testing.T) {
 
 	expectedErr := strings.Split(readInternalPasswordErr, "%")[0]
 
-	_, err := initInternalPassword(externalPassword, ls, b)
+	_, err := initInternalPassword(externalPassword, ls, b, defaultParams())
 	if err == nil || !strings.Contains(err.Error(), expectedErr) {
 		t.Errorf("Unexpected error when RNG returns a read error."+
 			"\nexpected: %s\nreceived: %+v", expectedErr, err)
@@ -139,7 +140,7 @@ func Test_initInternalPassword_CsprngReadNumBytesError(t *testing.T) {
 	expectedErr := fmt.Sprintf(
 		internalPasswordNumBytesErr, internalPasswordLen, internalPasswordLen/2)
 
-	_, err := initInternalPassword(externalPassword, ls, b)
+	_, err := initInternalPassword(externalPassword, ls, b, defaultParams())
 	if err == nil || !strings.Contains(err.Error(), expectedErr) {
 		t.Errorf("Unexpected error when RNG does not return enough bytes."+
 			"\nexpected: %s\nreceived: %+v", expectedErr, err)
@@ -153,7 +154,8 @@ func Test_getInternalPassword(t *testing.T) {
 	ls := utils.GetLocalStorage()
 	rng := csprng.NewSystemRNG()
 
-	internalPassword, err := initInternalPassword(externalPassword, ls, rng)
+	internalPassword, err := initInternalPassword(
+		externalPassword, ls, rng, defaultParams())
 	if err != nil {
 		t.Errorf("%+v", err)
 	}
@@ -211,6 +213,7 @@ func Test_getInternalPassword_DecryptPasswordError(t *testing.T) {
 	ls.Clear()
 	ls.SetItem(saltKey, []byte("salt"))
 	ls.SetItem(passwordKey, []byte("password"))
+	ls.SetItem(argonParamsKey, []byte(`{"Time": 1, "Memory": 65536, "Threads": 4}`))
 
 	expectedErr := strings.Split(decryptPasswordErr, "%")[0]
 

@@ -11,6 +11,7 @@ package creds
 
 import (
 	"crypto/cipher"
+	"encoding/json"
 	"github.com/pkg/errors"
 	jww "github.com/spf13/jwalterweatherman"
 	"gitlab.com/elixxir/xxdk-wasm/utils"
@@ -23,15 +24,10 @@ import (
 	"syscall/js"
 )
 
+// Data lengths
 const (
 	// Length of the internal password (256-bit)
 	internalPasswordLen = 32
-
-	// Key used to store the encrypted internal password salt in local storage
-	saltKey = "xxInternalPasswordSalt"
-
-	// Key used to store the encrypted internal password in local storage
-	passwordKey = "xxEncryptedInternalPassword"
 
 	// keyLen is the length of the key generated
 	keyLen = chacha20poly1305.KeySize
@@ -41,11 +37,26 @@ const (
 	saltLen = 16
 )
 
+// Storage keys.
+const (
+	// Key used to store the encrypted internal password salt in local storage.
+	saltKey = "xxInternalPasswordSalt"
+
+	// Key used to store the encrypted internal password in local storage.
+	passwordKey = "xxEncryptedInternalPassword"
+
+	// Key used to store the argon2 parameters used to encrypted/decrypt the
+	// password.
+	argonParamsKey = "xxEncryptedInternalPasswordParams"
+)
+
 // Error messages.
 const (
 	// getInternalPassword
 	getPasswordStorageErr = "could not retrieve encrypted internal password from storage: %+v"
 	getSaltStorageErr     = "could not retrieve salt from storage: %+v"
+	getParamsStorageErr   = "could not retrieve encryption parameters from storage: %+v"
+	paramsUnmarshalErr    = "failed to unmarshal encryption parameters loaded from storage: %+v"
 	decryptPasswordErr    = "could not decrypt internal password: %+v"
 
 	// initInternalPassword
@@ -119,7 +130,8 @@ func GetOrInit(externalPassword string) ([]byte, error) {
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			rng := csprng.NewSystemRNG()
-			return initInternalPassword(externalPassword, localStorage, rng)
+			return initInternalPassword(
+				externalPassword, localStorage, rng, defaultParams())
 		}
 
 		return nil, err
@@ -154,9 +166,11 @@ func ChangeExternalPassword(oldExternalPassword, newExternalPassword string) err
 // initInternalPassword generates a new internal password, stores an encrypted
 // version in local storage, and returns it.
 func initInternalPassword(externalPassword string,
-	localStorage *utils.LocalStorage, csprng io.Reader) ([]byte, error) {
+	localStorage *utils.LocalStorage, csprng io.Reader,
+	params argonParams) ([]byte, error) {
 	internalPassword := make([]byte, internalPasswordLen)
 
+	// Generate internal password
 	n, err := csprng.Read(internalPassword)
 	if err != nil {
 		return nil, errors.Errorf(readInternalPasswordErr, err)
@@ -165,13 +179,21 @@ func initInternalPassword(externalPassword string,
 			internalPasswordNumBytesErr, internalPasswordLen, n)
 	}
 
+	// Generate and store salt
 	salt, err := makeSalt(csprng)
 	if err != nil {
 		return nil, err
 	}
 	localStorage.SetItem(saltKey, salt)
 
-	key := deriveKey(externalPassword, salt, defaultParams())
+	// Store argon2 parameters
+	paramsData, err := json.Marshal(params)
+	if err != nil {
+		return nil, err
+	}
+	localStorage.SetItem(argonParamsKey, paramsData)
+
+	key := deriveKey(externalPassword, salt, params)
 
 	encryptedInternalPassword := encryptPassword(internalPassword, key, csprng)
 	localStorage.SetItem(passwordKey, encryptedInternalPassword)
@@ -193,7 +215,18 @@ func getInternalPassword(
 		return nil, errors.WithMessage(err, getSaltStorageErr)
 	}
 
-	key := deriveKey(externalPassword, salt, defaultParams())
+	paramsData, err := localStorage.GetItem(argonParamsKey)
+	if err != nil {
+		return nil, errors.WithMessage(err, getParamsStorageErr)
+	}
+
+	var params argonParams
+	err = json.Unmarshal(paramsData, &params)
+	if err != nil {
+		return nil, errors.Errorf(paramsUnmarshalErr, err)
+	}
+
+	key := deriveKey(externalPassword, salt, params)
 
 	decryptedInternalPassword, err :=
 		decryptPassword(encryptedInternalPassword, key)
