@@ -512,18 +512,31 @@ type ShareURL struct {
 // revealing nothing. For any level above the lowest, a password is returned,
 // which will be required when decoding the URL.
 //
+// The maxUses is the maximum number of times this URL can be used to join a
+// channel. If it is set to 0, then it can be shared unlimited times. The max
+// uses is set as a URL parameter using the key [broadcast.MaxUsesKey]. Note
+// that this number is also encoded in the secret data for private and secret
+// URLs, so if the number is changed in the URL, is will be verified when
+// calling [ChannelsManager.JoinChannelFromURL]. There is no enforcement for
+// public URLs.
+//
 // Parameters:
 //  - args[0] - ID of [Cmix] object in tracker (int).
 //  - args[1] - The URL to append the channel info to (string).
-//  - args[2] - Marshalled bytes of the channel [id.ID] (Uint8Array).
+//  - args[2] - The maximum number of uses the link can be used (0 for
+//    unlimited) (int).
+//  - args[3] - Marshalled bytes of the channel [id.ID] (Uint8Array).
 //
 // Returns:
 //  - JSON of [bindings.ShareURL] (Uint8Array).
 //  - Throws a TypeError if generating the URL fails.
 func (ch *ChannelsManager) GetShareURL(_ js.Value, args []js.Value) interface{} {
-	marshalledChanId := utils.CopyBytesToGo(args[2])
+	cmixID := args[0].Int()
+	host := args[1].String()
+	maxUses := args[2].Int()
+	marshalledChanId := utils.CopyBytesToGo(args[3])
 
-	su, err := ch.api.GetShareURL(args[0].Int(), args[1].String(), marshalledChanId)
+	su, err := ch.api.GetShareURL(cmixID, host, maxUses, marshalledChanId)
 	if err != nil {
 		utils.Throw(utils.TypeError, err)
 		return nil
