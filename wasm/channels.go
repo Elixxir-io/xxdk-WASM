@@ -352,12 +352,13 @@ func LoadChannelsManagerWithIndexedDb(_ js.Value, args []js.Value) interface{} {
 //
 // Parameters:
 //  - args[0] - ID of [Cmix] object in tracker (int).
-//  - args[1] - The name of the new channel. The name cannot be longer than __
-//    characters and must contain only _____ characters. It cannot be changed
-//    once a channel is created. (string).
-//  - args[2] - The description of a channel. The description cannot be longer
-//    than __ characters and must contain only __ characters. It cannot be
-//    changed once a channel is created (string).
+//  - args[1] - The name of the new channel (string). The name must be between 3
+//    and 24 characters inclusive. It can only include upper and lowercase
+//    unicode letters, digits 0 through 9, and underscores (_). It cannot be
+//    changed once a channel is created.
+//  - args[2] - The description of a channel (string). The description is
+//    optional but cannot be longer than 144 characters and can include all
+//    unicode characters. It cannot be changed once a channel is created.
 //  - args[3] - The [broadcast.PrivacyLevel] of the channel (int). 0 = public,
 //    1 = private, and 2 = secret. Refer to the comment below for more
 //    information.
@@ -394,7 +395,7 @@ func GenerateChannel(_ js.Value, args []js.Value) interface{} {
 //  - args[0] - The pretty print of the channel (string).
 //
 // The pretty print will be of the format:
-//  <XXChannel-v1:Test Channel,description:This is a test channel,secrets:pn0kIs6P1pHvAe7u8kUyf33GYVKmkoCX9LhCtvKJZQI=,3A5eB5pzSHyxN09w1kOVrTIEr5UyBbzmmd9Ga5Dx0XA=,0,0,/zChIlLr2p3Vsm2X4+3TiFapoapaTi8EJIisJSqwfGc=>
+//  <Speakeasy-v1:Test Channel,description:This is a test channel,secrets:YxHhRAKy2D4XU2oW5xnW/3yaqOeh8nO+ZSd3nUmiQ3c=,6pXN2H9FXcOj7pjJIZoq6nMi4tGX2s53fWH5ze2dU1g=,493,1,MVjkHlm0JuPxQNAn6WHsPdOw9M/BUF39p7XB/QEkQyc=>
 //
 // Returns:
 //  - JSON of [bindings.ChannelInfo], which describes all relevant channel info
@@ -418,7 +419,7 @@ func GetChannelInfo(_ js.Value, args []js.Value) interface{} {
 //    or generated via GenerateChannel (string).
 //
 // The pretty print will be of the format:
-//  <XXChannel-v1:Test Channel,description:This is a test channel,secrets:pn0kIs6P1pHvAe7u8kUyf33GYVKmkoCX9LhCtvKJZQI=,3A5eB5pzSHyxN09w1kOVrTIEr5UyBbzmmd9Ga5Dx0XA=,0,0,/zChIlLr2p3Vsm2X4+3TiFapoapaTi8EJIisJSqwfGc=>"
+//  <Speakeasy-v1:Test Channel,description:This is a test channel,secrets:YxHhRAKy2D4XU2oW5xnW/3yaqOeh8nO+ZSd3nUmiQ3c=,6pXN2H9FXcOj7pjJIZoq6nMi4tGX2s53fWH5ze2dU1g=,493,1,MVjkHlm0JuPxQNAn6WHsPdOw9M/BUF39p7XB/QEkQyc=>
 //
 // Returns:
 //  - JSON of [bindings.ChannelInfo], which describes all relevant channel info
