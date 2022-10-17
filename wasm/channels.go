@@ -81,7 +81,7 @@ func (ch *ChannelsManager) GetID(js.Value, []js.Value) interface{} {
 //  - args[0] - ID of [Cmix] object in tracker (int).
 //
 // Returns:
-//  - JSON of [channel.PrivateIdentity] (Uint8Array).
+//  - Marshalled bytes of [channel.PrivateIdentity] (Uint8Array).
 //  - Throws a TypeError if generating the identity fails.
 func GenerateChannelIdentity(_ js.Value, args []js.Value) interface{} {
 	pi, err := bindings.GenerateChannelIdentity(args[0].Int())
@@ -1034,7 +1034,8 @@ func (em *eventModel) LeaveChannel(channelID []byte) {
 //    (Uint8Array).
 //  - nickname - The nickname of the sender of the message (string).
 //  - text - The content of the message (string).
-//  - identity - JSON of the sender's public ([channel.Identity]) (Uint8Array).
+//  - pubKey - The sender's Ed25519 public key (Uint8Array).
+//  - codeset - The codeset version (int).
 //  - timestamp - Time the message was received; represented as nanoseconds
 //    since unix epoch (int).
 //  - lease - The number of nanoseconds that the message is valid for (int).
@@ -1051,12 +1052,12 @@ func (em *eventModel) LeaveChannel(channelID []byte) {
 //  - A non-negative unique UUID for the message that it can be referenced by
 //    later with [eventModel.UpdateSentStatus].
 func (em *eventModel) ReceiveMessage(channelID, messageID []byte, nickname,
-	text string, identity []byte, timestamp, lease, roundId, msgType,
+	text string, pubKey []byte, codeset int, timestamp, lease, roundId, msgType,
 	status int64) int64 {
 	uuid := em.receiveMessage(utils.CopyBytesToJS(channelID),
 		utils.CopyBytesToJS(messageID), nickname, text,
-		utils.CopyBytesToJS(identity),
-		timestamp, lease, roundId, msgType, status)
+		utils.CopyBytesToJS(pubKey), codeset, timestamp, lease, roundId,
+		msgType, status)
 
 	return int64(uuid.Int())
 }
@@ -1076,7 +1077,8 @@ func (em *eventModel) ReceiveMessage(channelID, messageID []byte, nickname,
 //    (Uint8Array).
 //  - senderUsername - The username of the sender of the message (string).
 //  - text - The content of the message (string).
-//  - identity - JSON of the sender's public ([channel.Identity]) (Uint8Array).
+//  - pubKey - The sender's Ed25519 public key (Uint8Array).
+//  - codeset - The codeset version (int).
 //  - timestamp - Time the message was received; represented as nanoseconds
 //    since unix epoch (int).
 //  - lease - The number of nanoseconds that the message is valid for (int).
@@ -1093,11 +1095,11 @@ func (em *eventModel) ReceiveMessage(channelID, messageID []byte, nickname,
 //  - A non-negative unique UUID for the message that it can be referenced by
 //    later with [eventModel.UpdateSentStatus].
 func (em *eventModel) ReceiveReply(channelID, messageID, reactionTo []byte,
-	senderUsername, text string, identity []byte, timestamp, lease, roundId,
-	msgType, status int64) int64 {
+	senderUsername, text string, pubKey []byte, codeset int, timestamp, lease,
+	roundId, msgType, status int64) int64 {
 	uuid := em.receiveReply(utils.CopyBytesToJS(channelID),
 		utils.CopyBytesToJS(messageID), utils.CopyBytesToJS(reactionTo),
-		senderUsername, text, utils.CopyBytesToJS(identity),
+		senderUsername, text, utils.CopyBytesToJS(pubKey), codeset,
 		timestamp, lease, roundId, msgType, status)
 
 	return int64(uuid.Int())
@@ -1118,7 +1120,8 @@ func (em *eventModel) ReceiveReply(channelID, messageID, reactionTo []byte,
 //    (Uint8Array).
 //  - senderUsername - The username of the sender of the message (string).
 //  - reaction - The contents of the reaction message (string).
-//  - identity - JSON of the sender's public ([channel.Identity]) (Uint8Array).
+//  - pubKey - The sender's Ed25519 public key (Uint8Array).
+//  - codeset - The codeset version (int).
 //  - timestamp - Time the message was received; represented as nanoseconds
 //    since unix epoch (int).
 //  - lease - The number of nanoseconds that the message is valid for (int).
@@ -1135,11 +1138,11 @@ func (em *eventModel) ReceiveReply(channelID, messageID, reactionTo []byte,
 //  - A non-negative unique UUID for the message that it can be referenced by
 //    later with [eventModel.UpdateSentStatus].
 func (em *eventModel) ReceiveReaction(channelID, messageID, reactionTo []byte,
-	senderUsername, reaction string, identity []byte, timestamp, lease, roundId,
-	msgType, status int64) int64 {
+	senderUsername, reaction string, pubKey []byte, codeset int, timestamp,
+	lease, roundId, msgType, status int64) int64 {
 	uuid := em.receiveReaction(utils.CopyBytesToJS(channelID),
 		utils.CopyBytesToJS(messageID), utils.CopyBytesToJS(reactionTo),
-		senderUsername, reaction, utils.CopyBytesToJS(identity),
+		senderUsername, reaction, utils.CopyBytesToJS(pubKey), codeset,
 		timestamp, lease, roundId, msgType, status)
 
 	return int64(uuid.Int())
