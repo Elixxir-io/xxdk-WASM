@@ -41,12 +41,10 @@ func TestWasmModel_UpdateSentStatus(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 
-	cid := channel.Identity{}
-
 	// Store a test message
 	testMsg := buildMessage([]byte(testString), testMsgId.Bytes(), nil,
-		testString, testString, cid, time.Now(), time.Second, 0, 0,
-		channels.Sent)
+		testString, testString, []byte{8, 6, 7, 5}, 0, time.Now(),
+		time.Second, 0, 0, channels.Sent)
 	uuid, err := eventModel.receiveHelper(testMsg)
 	if err != nil {
 		t.Fatalf("%+v", err)
@@ -135,14 +133,6 @@ func TestWasmModel_UUIDTest(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 
-	cid := channel.Identity{
-		Codename:       "codename123",
-		PubKey:         []byte{8, 6, 7, 5},
-		Color:          "#FFFFFF",
-		Extension:      "gif",
-		CodesetVersion: 0,
-	}
-
 	uuids := make([]uint64, 10)
 
 	for i := 0; i < 10; i++ {
@@ -152,7 +142,8 @@ func TestWasmModel_UUIDTest(t *testing.T) {
 		copy(msgID[:], testString+fmt.Sprintf("%d", i))
 		rnd := rounds.Round{ID: id.Round(42)}
 		uuid := eventModel.ReceiveMessage(channelID, msgID,
-			"test", testString+fmt.Sprintf("%d", i), cid, time.Now(),
+			"test", testString+fmt.Sprintf("%d", i),
+			[]byte{8, 6, 7, 5}, 0, time.Now(),
 			time.Hour, rnd, 0, channels.Sent)
 		uuids[i] = uuid
 	}
@@ -178,14 +169,6 @@ func TestWasmModel_DuplicateReceives(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 
-	cid := channel.Identity{
-		Codename:       "codename123",
-		PubKey:         []byte{8, 6, 7, 5},
-		Color:          "#FFFFFF",
-		Extension:      "gif",
-		CodesetVersion: 0,
-	}
-
 	uuids := make([]uint64, 10)
 
 	msgID := channel.MessageID{}
@@ -195,8 +178,8 @@ func TestWasmModel_DuplicateReceives(t *testing.T) {
 		channelID := id.NewIdFromBytes([]byte(testString), t)
 		rnd := rounds.Round{ID: id.Round(42)}
 		uuid := eventModel.ReceiveMessage(channelID, msgID,
-			"test", testString+fmt.Sprintf("%d", i), cid, time.Now(),
-			time.Hour, rnd, 0, channels.Sent)
+			"test", testString+fmt.Sprintf("%d", i), []byte{8, 6, 7, 5},
+			0, time.Now(), time.Hour, rnd, 0, channels.Sent)
 		uuids[i] = uuid
 	}
 
@@ -228,7 +211,6 @@ func TestWasmModel_deleteMsgByChannel(t *testing.T) {
 	keepChannel := id.NewIdFromString("dontDeleteMe", id.Generic, t)
 
 	// Store some test messages
-	cid := channel.Identity{}
 	for i := 0; i < totalMessages; i++ {
 		testStr := testString + strconv.Itoa(i)
 
@@ -240,7 +222,7 @@ func TestWasmModel_deleteMsgByChannel(t *testing.T) {
 
 		testMsgId := channel.MakeMessageID([]byte(testStr), &id.ID{1})
 		eventModel.ReceiveMessage(thisChannel, testMsgId, testStr,
-			testStr, cid, time.Now(), time.Second, rounds.Round{ID: id.Round(0)}, 0, channels.Sent)
+			testStr, []byte{8, 6, 7, 5}, 0, time.Now(), time.Second, rounds.Round{ID: id.Round(0)}, 0, channels.Sent)
 	}
 
 	// Check pre-results
