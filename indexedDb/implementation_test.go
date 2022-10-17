@@ -12,6 +12,7 @@ package indexedDb
 import (
 	"encoding/json"
 	"fmt"
+	"gitlab.com/xx_network/primitives/netTime"
 	"os"
 	"strconv"
 	"testing"
@@ -43,7 +44,7 @@ func TestWasmModel_UpdateSentStatus(t *testing.T) {
 
 	// Store a test message
 	testMsg := buildMessage([]byte(testString), testMsgId.Bytes(), nil,
-		testString, testString, []byte{8, 6, 7, 5}, 0, time.Now(),
+		testString, testString, []byte{8, 6, 7, 5}, 0, netTime.Now(),
 		time.Second, 0, 0, channels.Sent)
 	uuid, err := eventModel.receiveHelper(testMsg)
 	if err != nil {
@@ -61,7 +62,7 @@ func TestWasmModel_UpdateSentStatus(t *testing.T) {
 
 	// Update the sentStatus
 	expectedStatus := channels.Failed
-	eventModel.UpdateSentStatus(uuid, testMsgId, time.Now(),
+	eventModel.UpdateSentStatus(uuid, testMsgId, netTime.Now(),
 		rounds.Round{ID: 8675309}, expectedStatus)
 
 	// Check the resulting status
@@ -141,10 +142,9 @@ func TestWasmModel_UUIDTest(t *testing.T) {
 		msgID := channel.MessageID{}
 		copy(msgID[:], testString+fmt.Sprintf("%d", i))
 		rnd := rounds.Round{ID: id.Round(42)}
-		uuid := eventModel.ReceiveMessage(channelID, msgID,
-			"test", testString+fmt.Sprintf("%d", i),
-			[]byte{8, 6, 7, 5}, 0, time.Now(),
-			time.Hour, rnd, 0, channels.Sent)
+		uuid := eventModel.ReceiveMessage(channelID, msgID, "test",
+			testString+fmt.Sprintf("%d", i), []byte{8, 6, 7, 5}, 0,
+			netTime.Now(), time.Hour, rnd, 0, channels.Sent)
 		uuids[i] = uuid
 	}
 
@@ -177,9 +177,9 @@ func TestWasmModel_DuplicateReceives(t *testing.T) {
 		// Store a test message
 		channelID := id.NewIdFromBytes([]byte(testString), t)
 		rnd := rounds.Round{ID: id.Round(42)}
-		uuid := eventModel.ReceiveMessage(channelID, msgID,
-			"test", testString+fmt.Sprintf("%d", i), []byte{8, 6, 7, 5},
-			0, time.Now(), time.Hour, rnd, 0, channels.Sent)
+		uuid := eventModel.ReceiveMessage(channelID, msgID, "test",
+			testString+fmt.Sprintf("%d", i), []byte{8, 6, 7, 5}, 0,
+			netTime.Now(), time.Hour, rnd, 0, channels.Sent)
 		uuids[i] = uuid
 	}
 
@@ -221,8 +221,9 @@ func TestWasmModel_deleteMsgByChannel(t *testing.T) {
 		}
 
 		testMsgId := channel.MakeMessageID([]byte(testStr), &id.ID{1})
-		eventModel.ReceiveMessage(thisChannel, testMsgId, testStr,
-			testStr, []byte{8, 6, 7, 5}, 0, time.Now(), time.Second, rounds.Round{ID: id.Round(0)}, 0, channels.Sent)
+		eventModel.ReceiveMessage(thisChannel, testMsgId, testStr, testStr,
+			[]byte{8, 6, 7, 5}, 0, netTime.Now(), time.Second,
+			rounds.Round{ID: id.Round(0)}, 0, channels.Sent)
 	}
 
 	// Check pre-results

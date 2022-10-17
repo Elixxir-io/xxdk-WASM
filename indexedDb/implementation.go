@@ -206,8 +206,9 @@ func (w *wasmModel) ReceiveMessage(channelID *id.ID,
 	timestamp time.Time, lease time.Duration, round rounds.Round,
 	mType channels.MessageType, status channels.SentStatus) uint64 {
 
-	msgToInsert := buildMessage(channelID.Marshal(), messageID.Bytes(), nil,
-		nickname, text, pubKey, codeset, timestamp, lease, round.ID, mType, status)
+	msgToInsert := buildMessage(
+		channelID.Marshal(), messageID.Bytes(), nil, nickname, text, pubKey,
+		codeset, timestamp, lease, round.ID, mType, status)
 
 	uuid, err := w.receiveHelper(msgToInsert)
 	if err != nil {
@@ -255,9 +256,9 @@ func (w *wasmModel) ReceiveReaction(channelID *id.ID,
 	timestamp time.Time, lease time.Duration, round rounds.Round,
 	mType channels.MessageType, status channels.SentStatus) uint64 {
 
-	msgToInsert := buildMessage(channelID.Marshal(), messageID.Bytes(),
-		reactionTo.Bytes(), nickname, reaction, pubKey, codeset, timestamp, lease,
-		round.ID, mType, status)
+	msgToInsert := buildMessage(
+		channelID.Marshal(), messageID.Bytes(), reactionTo.Bytes(), nickname,
+		reaction, pubKey, codeset, timestamp, lease, round.ID, mType, status)
 
 	uuid, err := w.receiveHelper(msgToInsert)
 	if err != nil {
@@ -327,8 +328,8 @@ func (w *wasmModel) UpdateSentStatus(uuid uint64, messageID cryptoChannel.Messag
 //       an existing message, then you need to set it manually
 //       yourself.
 func buildMessage(channelID, messageID, parentID []byte, nickname, text string,
-	pubKey ed25519.PublicKey, codeset uint8, timestamp time.Time, lease time.Duration,
-	round id.Round, mType channels.MessageType,
+	pubKey ed25519.PublicKey, codeset uint8, timestamp time.Time,
+	lease time.Duration, round id.Round, mType channels.MessageType,
 	status channels.SentStatus) *Message {
 	return &Message{
 		MessageID:       messageID,
@@ -407,8 +408,7 @@ func (w *wasmModel) receiveHelper(newMessage *Message) (uint64,
 		return 0, errors.Errorf("uuid lookup failure: %+v", err)
 	}
 	uuid := uint64(res.Int())
-	jww.DEBUG.Printf(
-		"Successfully stored message %d", uuid)
+	jww.DEBUG.Printf("Successfully stored message %d", uuid)
 
 	return uuid, nil
 }

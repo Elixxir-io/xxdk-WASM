@@ -69,8 +69,7 @@ type jsIdentity struct {
 // efficiency for previously generated identities.
 func BenchmarkConstructIdentity(b *testing.B) {
 	const n = 100_000
-	identities := make([]jsIdentity, 1000)
-	j := 0
+	identities, j := make([]jsIdentity, 1000), 0
 	for i := 0; i < n; i++ {
 		pi, err := channel.GenerateIdentity(csprng.NewSystemRNG())
 		if err != nil {
