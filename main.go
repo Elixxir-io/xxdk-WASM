@@ -28,7 +28,7 @@ func init() {
 	jww.SetStdoutThreshold(jww.LevelFatal + 1)
 
 	// Check that the WASM binary version is correct
-	err := CheckAndStoreVersions()
+	err := utils.CheckAndStoreVersions()
 	if err != nil {
 		jww.FATAL.Panicf("WASM binary version error: %+v", err)
 	}

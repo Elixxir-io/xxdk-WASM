@@ -7,17 +7,16 @@
 
 //go:build js && wasm
 
-package main
+package utils
 
 import (
-	"gitlab.com/elixxir/xxdk-wasm/utils"
 	"testing"
 )
 
 // Tests that checkAndStoreVersions correct initialises the client and WASM
 // versions on first run and upgrades them correctly on subsequent runs.
 func Test_checkAndStoreVersions(t *testing.T) {
-	ls := utils.GetLocalStorage()
+	ls := GetLocalStorage()
 	ls.Clear()
 	oldWasmVer := "0.1"
 	newWasmVer := "1.0"
@@ -77,7 +76,7 @@ func Test_checkAndStoreVersions(t *testing.T) {
 // Tests that initOrLoadStoredSemver initialises the correct version on first run
 // and returns the same version on subsequent runs.
 func Test_initOrLoadStoredSemver(t *testing.T) {
-	ls := utils.GetLocalStorage()
+	ls := GetLocalStorage()
 	key := "testKey"
 	oldVersion := "0.1"
 

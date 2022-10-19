@@ -7,13 +7,12 @@
 
 //go:build js && wasm
 
-package main
+package utils
 
 import (
 	"github.com/pkg/errors"
 	jww "github.com/spf13/jwalterweatherman"
 	"gitlab.com/elixxir/client/bindings"
-	"gitlab.com/elixxir/xxdk-wasm/utils"
 	"os"
 )
 
@@ -33,10 +32,11 @@ const (
 // On first load, only the xxDK WASM and xxDK client versions are stored.
 func CheckAndStoreVersions() error {
 	return checkAndStoreVersions(
-		SEMVER, bindings.GetVersion(), utils.GetLocalStorage())
+		SEMVER, bindings.GetVersion(), GetLocalStorage())
 }
+
 func checkAndStoreVersions(
-	currentWasmVer, currentClientVer string, ls *utils.LocalStorage) error {
+	currentWasmVer, currentClientVer string, ls *LocalStorage) error {
 	// Get the stored client and WASM versions, if they exists
 	storedClientVer, err := initOrLoadStoredSemver(
 		clientVerKey, currentClientVer, ls)
@@ -77,7 +77,7 @@ func checkAndStoreVersions(
 // local storage. If no version is stored, then the current version is stored
 // and returned.
 func initOrLoadStoredSemver(
-	key, currentVersion string, ls *utils.LocalStorage) (string, error) {
+	key, currentVersion string, ls *LocalStorage) (string, error) {
 	storedVersion, err := ls.GetItem(key)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
