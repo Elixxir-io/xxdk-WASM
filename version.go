@@ -37,41 +37,37 @@ func CheckAndStoreVersions() error {
 }
 func checkAndStoreVersions(
 	currentWasmVer, currentClientVer string, ls *utils.LocalStorage) error {
-	// Get the stored client version, if it exists and save the new one
+	// Get the stored client and WASM versions, if they exists
 	storedClientVer, err := initOrLoadStoredSemver(
 		clientVerKey, currentClientVer, ls)
 	if err != nil {
 		return err
 	}
-	if storedClientVer != currentClientVer {
-		jww.INFO.Printf("Upgrading xxDK version: v%s → v%s",
-			storedClientVer, currentClientVer)
-		ls.SetItem(clientVerKey, []byte(currentClientVer))
-	}
-
-	// Get the stored version, if it exists
 	storedWasmVer, err := initOrLoadStoredSemver(semverKey, currentWasmVer, ls)
 	if err != nil {
 		return err
 	}
 
-	// Check if the stored version is current
-	if storedWasmVer == currentWasmVer {
+	// Check if client needs an update
+	if storedClientVer != currentClientVer {
+		jww.INFO.Printf("xxDK client out of date; upgrading version: v%s → v%s",
+			storedClientVer, currentClientVer)
+	} else {
+		jww.INFO.Printf("xxDK client version is current: v%s", storedClientVer)
+	}
+
+	// Check if WASM needs an update
+	if storedWasmVer != currentWasmVer {
+		jww.INFO.Printf("xxDK WASM out of date; upgrading version: v%s → v%s",
+			storedWasmVer, currentWasmVer)
+	} else {
 		jww.INFO.Printf("xxDK WASM version is current: v%s", storedWasmVer)
-		return nil
 	}
 
-	jww.INFO.Printf("xxDK WASM version is out of date. "+
-		"Upgrading versions: v%s → v%s", storedWasmVer, currentWasmVer)
+	// Upgrade path code goes here
 
-	// Upgrade old version
-	switch storedWasmVer {
-	case "-1.0.0":
-		// upgrade path
-	default:
-		jww.INFO.Printf("No upgrade path found for %s", storedWasmVer)
-	}
-
+	// Save current versions
+	ls.SetItem(clientVerKey, []byte(currentClientVer))
 	ls.SetItem(semverKey, []byte(currentWasmVer))
 
 	return nil
