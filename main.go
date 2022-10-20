@@ -141,6 +141,9 @@ func main() {
 	js.Global().Set("GetDefaultE2eFileTransferParams",
 		js.FuncOf(wasm.GetDefaultE2eFileTransferParams))
 
+	// wasm/purge.go
+	js.Global().Set("Purge", js.FuncOf(wasm.Purge))
+
 	// wasm/restlike.go
 	js.Global().Set("RestlikeRequest", js.FuncOf(wasm.RestlikeRequest))
 	js.Global().Set("RestlikeRequestAuth", js.FuncOf(wasm.RestlikeRequestAuth))
