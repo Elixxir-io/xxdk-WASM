@@ -10,6 +10,7 @@
 package indexedDb
 
 import (
+	"gitlab.com/elixxir/xxdk-wasm/utils"
 	"syscall/js"
 
 	"github.com/hack-pad/go-indexeddb/idb"
@@ -140,6 +141,13 @@ func v1Upgrade(db *idb.Database) error {
 	// Build Channel ObjectStore
 	_, err = db.CreateObjectStore(channelsStoreName, storeOpts)
 	if err != nil {
+		return err
+	}
+
+	// Get the database name and save it to storage
+	if databaseName, err := db.Name(); err != nil {
+		return err
+	} else if err = utils.StoreIndexedDb(databaseName); err != nil {
 		return err
 	}
 
