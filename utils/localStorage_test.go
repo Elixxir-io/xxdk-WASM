@@ -12,6 +12,7 @@ package utils
 import (
 	"bytes"
 	"github.com/pkg/errors"
+	"math/rand"
 	"os"
 	"strconv"
 	"testing"
@@ -84,10 +85,77 @@ func TestLocalStorage_Clear(t *testing.T) {
 	}
 }
 
+// Tests that LocalStorage.ClearWASM deletes all the WASM keys from storage and
+// does not remove any others
+func TestLocalStorage_ClearWASM(t *testing.T) {
+	jsStorage.clear()
+	prng := rand.New(rand.NewSource(11))
+	var yesPrefix, noPrefix []string
+	for i := 0; i < 10; i++ {
+		keyName := "keyNum" + strconv.Itoa(i)
+		if prng.Intn(2) == 0 {
+			yesPrefix = append(yesPrefix, keyName)
+			jsStorage.SetItem(keyName, []byte(strconv.Itoa(i)))
+		} else {
+			noPrefix = append(noPrefix, keyName)
+			jsStorage.setItem(keyName, strconv.Itoa(i))
+		}
+	}
+
+	jsStorage.ClearWASM()
+
+	for _, keyName := range noPrefix {
+		if v := jsStorage.getItem(keyName); v.IsNull() {
+			t.Errorf("Could not get keyName %q.", keyName)
+		}
+	}
+	for _, keyName := range yesPrefix {
+		keyValue, err := jsStorage.GetItem(keyName)
+		if err == nil || !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("Found keyName %q: %q", keyName, keyValue)
+		}
+	}
+}
+
+// Tests that LocalStorage.ClearPrefix deletes only the keys with the given
+// prefix.
+func TestLocalStorage_ClearPrefix(t *testing.T) {
+	jsStorage.clear()
+	prng := rand.New(rand.NewSource(11))
+	var yesPrefix, noPrefix []string
+	prefix := "keyNamePrefix/"
+
+	for i := 0; i < 10; i++ {
+		keyName := "keyNum" + strconv.Itoa(i)
+		if prng.Intn(2) == 0 {
+			keyName = prefix + keyName
+			yesPrefix = append(yesPrefix, keyName)
+		} else {
+			noPrefix = append(noPrefix, keyName)
+		}
+
+		jsStorage.SetItem(keyName, []byte(strconv.Itoa(i)))
+	}
+
+	jsStorage.ClearPrefix(prefix)
+
+	for _, keyName := range noPrefix {
+		if _, err := jsStorage.GetItem(keyName); err != nil {
+			t.Errorf("Could not get keyName %q: %+v", keyName, err)
+		}
+	}
+	for _, keyName := range yesPrefix {
+		keyValue, err := jsStorage.GetItem(keyName)
+		if err == nil || !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("Found keyName %q: %q", keyName, keyValue)
+		}
+	}
+}
+
 // Tests that LocalStorage.Key return all added keys when looping through all
 // indexes.
 func TestLocalStorage_Key(t *testing.T) {
-	jsStorage.v.Call("clear")
+	jsStorage.clear()
 	values := map[string][]byte{
 		"key1": []byte("key value"),
 		"key2": {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},
@@ -119,7 +187,7 @@ func TestLocalStorage_Key(t *testing.T) {
 // Tests that LocalStorage.Key returns the error os.ErrNotExist when the index
 // is greater than or equal to the number of keys.
 func TestLocalStorage_Key_NotExistError(t *testing.T) {
-	jsStorage.v.Call("clear")
+	jsStorage.clear()
 	jsStorage.SetItem("key", []byte("value"))
 
 	_, err := jsStorage.Key(1)
@@ -138,7 +206,7 @@ func TestLocalStorage_Key_NotExistError(t *testing.T) {
 // Tests that LocalStorage.Length returns the correct Length when adding and
 // removing various keys.
 func TestLocalStorage_Length(t *testing.T) {
-	jsStorage.v.Call("clear")
+	jsStorage.clear()
 	values := map[string][]byte{
 		"key1": []byte("key value"),
 		"key2": {0, 1, 2, 3, 4, 5, 6, 7, 8, 9},

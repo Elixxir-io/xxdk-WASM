@@ -12,11 +12,19 @@ package utils
 import (
 	"encoding/base64"
 	"os"
+	"strings"
 	"syscall/js"
 )
 
+// localStorageWasmPrefix is prefixed to every keyName saved to local storage by
+// LocalStorage. It allows the identifications and deletion of keys only created
+// by this WASM binary while ignoring keys made by other scripts on the same
+// page.
+const localStorageWasmPrefix = "xxdkWasmStorage/"
+
 // LocalStorage contains the js.Value representation of localStorage.
 type LocalStorage struct {
+	// The Javascript value containing the localStorage object
 	v js.Value
 }
 
@@ -41,8 +49,8 @@ func GetLocalStorage() *LocalStorage {
 //    https://html.spec.whatwg.org/multipage/webstorage.html#dom-storage-getitem-dev
 //  - Documentation:
 //    https://developer.mozilla.org/en-US/docs/Web/API/Storage/getItem
-func (s *LocalStorage) GetItem(keyName string) ([]byte, error) {
-	keyValue := s.v.Call("getItem", keyName)
+func (ls *LocalStorage) GetItem(keyName string) ([]byte, error) {
+	keyValue := ls.getItem(localStorageWasmPrefix + keyName)
 	if keyValue.IsNull() {
 		return nil, os.ErrNotExist
 	}
@@ -62,9 +70,9 @@ func (s *LocalStorage) GetItem(keyName string) ([]byte, error) {
 //    https://html.spec.whatwg.org/multipage/webstorage.html#dom-storage-setitem-dev
 //  - Documentation:
 //    https://developer.mozilla.org/en-US/docs/Web/API/Storage/setItem
-func (s *LocalStorage) SetItem(keyName string, keyValue []byte) {
+func (ls *LocalStorage) SetItem(keyName string, keyValue []byte) {
 	encodedKeyValue := base64.StdEncoding.EncodeToString(keyValue)
-	s.v.Call("setItem", keyName, encodedKeyValue)
+	ls.setItem(localStorageWasmPrefix+keyName, encodedKeyValue)
 }
 
 // RemoveItem removes a key's value from local storage given its name. If there
@@ -75,8 +83,8 @@ func (s *LocalStorage) SetItem(keyName string, keyValue []byte) {
 //    https://html.spec.whatwg.org/multipage/webstorage.html#dom-storage-removeitem-dev
 //  - Documentation:
 //    https://developer.mozilla.org/en-US/docs/Web/API/Storage/removeItem
-func (s *LocalStorage) RemoveItem(keyName string) {
-	s.v.Call("removeItem", keyName)
+func (ls *LocalStorage) RemoveItem(keyName string) {
+	ls.removeItem(localStorageWasmPrefix + keyName)
 }
 
 // Clear clears all the keys in storage. Underneath, it calls
@@ -86,8 +94,35 @@ func (s *LocalStorage) RemoveItem(keyName string) {
 //    https://html.spec.whatwg.org/multipage/webstorage.html#dom-storage-clear-dev
 //  - Documentation:
 //    https://developer.mozilla.org/en-US/docs/Web/API/Storage/clear
-func (s *LocalStorage) Clear() {
-	s.v.Call("clear")
+func (ls *LocalStorage) Clear() {
+	ls.clear()
+}
+
+// ClearWASM clears all the keys in storage created by WASM.
+// TODO: add test.
+func (ls *LocalStorage) ClearWASM() {
+	for i := 0; i < ls.Length(); i++ {
+		v := ls.key(i)
+		if !v.IsNull() && strings.HasPrefix(v.String(), localStorageWasmPrefix) {
+			ls.RemoveItem(strings.TrimPrefix(v.String(), localStorageWasmPrefix))
+
+			// Decrement to account for reduced length from removed key
+			i--
+		}
+	}
+}
+
+// ClearPrefix clears all keys with the given prefix.
+func (ls *LocalStorage) ClearPrefix(prefix string) {
+	for i := 0; i < ls.Length(); i++ {
+		keyName, err := ls.Key(i)
+		if err == nil && strings.HasPrefix(keyName, prefix) {
+			ls.RemoveItem(keyName)
+
+			// Decrement to account for reduced length from removed key
+			i--
+		}
+	}
 }
 
 // Key returns the name of the nth key in localStorage. Return os.ErrNotExist if
@@ -99,13 +134,13 @@ func (s *LocalStorage) Clear() {
 //    https://html.spec.whatwg.org/multipage/webstorage.html#dom-storage-key-dev
 //  - Documentation:
 //    https://developer.mozilla.org/en-US/docs/Web/API/Storage/key
-func (s *LocalStorage) Key(n int) (string, error) {
-	keyName := s.v.Call("key", n)
+func (ls *LocalStorage) Key(n int) (string, error) {
+	keyName := ls.key(n)
 	if keyName.IsNull() {
 		return "", os.ErrNotExist
 	}
 
-	return keyName.String(), nil
+	return strings.TrimPrefix(keyName.String(), localStorageWasmPrefix), nil
 }
 
 // Length returns the number of keys in localStorage. Underneath, it accesses
@@ -115,6 +150,14 @@ func (s *LocalStorage) Key(n int) (string, error) {
 //    https://html.spec.whatwg.org/multipage/webstorage.html#dom-storage-key-dev
 //  - Documentation:
 //    https://developer.mozilla.org/en-US/docs/Web/API/Storage/length
-func (s *LocalStorage) Length() int {
-	return s.v.Get("length").Int()
+func (ls *LocalStorage) Length() int {
+	return ls.length().Int()
 }
+
+// Wrappers for Javascript Storage methods and properties.
+func (ls *LocalStorage) getItem(keyName string) js.Value  { return ls.v.Call("getItem", keyName) }
+func (ls *LocalStorage) setItem(keyName, keyValue string) { ls.v.Call("setItem", keyName, keyValue) }
+func (ls *LocalStorage) removeItem(keyName string)        { ls.v.Call("removeItem", keyName) }
+func (ls *LocalStorage) clear()                           { ls.v.Call("clear") }
+func (ls *LocalStorage) key(n int) js.Value               { return ls.v.Call("key", n) }
+func (ls *LocalStorage) length() js.Value                 { return ls.v.Get("length") }
