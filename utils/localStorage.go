@@ -98,29 +98,34 @@ func (ls *LocalStorage) Clear() {
 	ls.clear()
 }
 
-// ClearWASM clears all the keys in storage created by WASM.
-// TODO: add test.
-func (ls *LocalStorage) ClearWASM() {
-	for i := 0; i < ls.Length(); i++ {
-		v := ls.key(i)
-		if !v.IsNull() && strings.HasPrefix(v.String(), localStorageWasmPrefix) {
-			ls.RemoveItem(strings.TrimPrefix(v.String(), localStorageWasmPrefix))
+// ClearPrefix clears all keys with the given prefix.
+func (ls *LocalStorage) ClearPrefix(prefix string) {
+	// Get a copy of all key names at once
+	keys := js.Global().Get("Object").Call("keys", ls.v)
 
-			// Decrement to account for reduced length from removed key
-			i--
+	// Loop through each key
+	for i := 0; i < keys.Length(); i++ {
+		if v := keys.Index(i); !v.IsNull() {
+			keyName := strings.TrimPrefix(v.String(), localStorageWasmPrefix)
+			if strings.HasPrefix(keyName, prefix) {
+				ls.RemoveItem(keyName)
+			}
 		}
 	}
 }
 
-// ClearPrefix clears all keys with the given prefix.
-func (ls *LocalStorage) ClearPrefix(prefix string) {
-	for i := 0; i < ls.Length(); i++ {
-		keyName, err := ls.Key(i)
-		if err == nil && strings.HasPrefix(keyName, prefix) {
-			ls.RemoveItem(keyName)
+// ClearWASM clears all the keys in storage created by WASM.
+func (ls *LocalStorage) ClearWASM() {
+	// Get a copy of all key names at once
+	keys := js.Global().Get("Object").Call("keys", ls.v)
 
-			// Decrement to account for reduced length from removed key
-			i--
+	// Loop through each key
+	for i := 0; i < keys.Length(); i++ {
+		if v := keys.Index(i); !v.IsNull() {
+			keyName := v.String()
+			if strings.HasPrefix(keyName, localStorageWasmPrefix) {
+				ls.RemoveItem(strings.TrimPrefix(keyName, localStorageWasmPrefix))
+			}
 		}
 	}
 }
