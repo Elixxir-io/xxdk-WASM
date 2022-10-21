@@ -18,8 +18,8 @@ import (
 const indexedDbListKey = "xxDkWasmIndexedDbList"
 
 // GetIndexedDbList returns the list of stored indexedDb databases.
-func GetIndexedDbList() ([]string, error) {
-	var list []string
+func GetIndexedDbList() (map[string]struct{}, error) {
+	list := make(map[string]struct{})
 	listBytes, err := GetLocalStorage().GetItem(indexedDbListKey)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
@@ -40,7 +40,7 @@ func StoreIndexedDb(databaseName string) error {
 		return err
 	}
 
-	list = append(list, databaseName)
+	list[databaseName] = struct{}{}
 
 	listBytes, err := json.Marshal(list)
 	if err != nil {

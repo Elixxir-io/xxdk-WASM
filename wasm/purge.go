@@ -63,7 +63,7 @@ func Purge(_ js.Value, args []js.Value) interface{} {
 	}
 
 	// Delete each database
-	for _, dbName := range databaseList {
+	for dbName := range databaseList {
 		_, err = idb.Global().DeleteDatabase(dbName)
 		if err != nil {
 			utils.Throw(
