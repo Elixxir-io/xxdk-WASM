@@ -17,9 +17,9 @@ import (
 // Tests that three indexedDb database names stored with StoreIndexedDb are
 // retrieved with GetIndexedDbList.
 func TestStoreIndexedDb_GetIndexedDbList(t *testing.T) {
-	expected := []string{"db1", "db2", "db3"}
+	expected := map[string]struct{}{"db1": {}, "db2": {}, "db3": {}}
 
-	for _, name := range expected {
+	for name := range expected {
 		err := StoreIndexedDb(name)
 		if err != nil {
 			t.Errorf("Failed to store database name %q: %+v", name, err)
