@@ -7,12 +7,11 @@
 
 //go:build js && wasm
 
-package wasm
+package storage
 
 import (
 	"github.com/hack-pad/go-indexeddb/idb"
 	"github.com/pkg/errors"
-	"gitlab.com/elixxir/xxdk-wasm/creds"
 	"gitlab.com/elixxir/xxdk-wasm/utils"
 	"sync/atomic"
 	"syscall/js"
@@ -41,7 +40,7 @@ var NumClientsRunning uint64
 //    followers have been stopped.
 func Purge(_ js.Value, args []js.Value) interface{} {
 	// Check the password
-	if !creds.VerifyPassword(js.Value{}, []js.Value{args[1]}).(bool) {
+	if !verifyPassword(args[1].String()) {
 		utils.Throw(utils.TypeError, errors.New("invalid password"))
 		return nil
 	}
@@ -54,7 +53,7 @@ func Purge(_ js.Value, args []js.Value) interface{} {
 	}
 
 	// Get all indexedDb database names
-	databaseList, err := utils.GetIndexedDbList()
+	databaseList, err := GetIndexedDbList()
 	if err != nil {
 		utils.Throw(
 			utils.TypeError, errors.Errorf(
@@ -74,7 +73,7 @@ func Purge(_ js.Value, args []js.Value) interface{} {
 	}
 
 	// Clear WASM local storage and EKV
-	ls := utils.GetLocalStorage()
+	ls := GetLocalStorage()
 	ls.ClearWASM()
 	ls.ClearPrefix(args[0].String())
 

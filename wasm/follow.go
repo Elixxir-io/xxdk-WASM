@@ -10,6 +10,7 @@
 package wasm
 
 import (
+	"gitlab.com/elixxir/xxdk-wasm/storage"
 	"gitlab.com/elixxir/xxdk-wasm/utils"
 	"sync/atomic"
 	"syscall/js"
@@ -61,7 +62,7 @@ func (c *Cmix) StartNetworkFollower(_ js.Value, args []js.Value) interface{} {
 		return nil
 	}
 
-	atomic.AddUint64(&NumClientsRunning, 1)
+	atomic.AddUint64(&storage.NumClientsRunning, 1)
 
 	return nil
 }
@@ -80,7 +81,7 @@ func (c *Cmix) StopNetworkFollower(js.Value, []js.Value) interface{} {
 		utils.Throw(utils.TypeError, err)
 		return nil
 	}
-	atomic.AddUint64(&NumClientsRunning, ^uint64(0))
+	atomic.AddUint64(&storage.NumClientsRunning, ^uint64(0))
 
 	return nil
 }
