@@ -10,6 +10,8 @@
 package indexedDb
 
 import (
+	"github.com/pkg/errors"
+	cryptoChannel "gitlab.com/elixxir/crypto/channel"
 	"gitlab.com/elixxir/xxdk-wasm/storage"
 	"syscall/js"
 
@@ -38,25 +40,25 @@ type MessageReceivedCallback func(uuid uint64, channelID *id.ID, update bool)
 // NewWASMEventModelBuilder returns an EventModelBuilder which allows
 // the channel manager to define the path but the callback is the same
 // across the board.
-func NewWASMEventModelBuilder(
+func NewWASMEventModelBuilder(encryption cryptoChannel.Cipher,
 	cb MessageReceivedCallback) channels.EventModelBuilder {
 	fn := func(path string) (channels.EventModel, error) {
-		return NewWASMEventModel(path, cb)
+		return NewWASMEventModel(path, encryption, cb)
 	}
 	return fn
 }
 
 // NewWASMEventModel returns a [channels.EventModel] backed by a wasmModel.
 // The name should be a base64 encoding of the users public key.
-func NewWASMEventModel(path string, cb MessageReceivedCallback) (
-	channels.EventModel, error) {
+func NewWASMEventModel(path string, encryption cryptoChannel.Cipher,
+	cb MessageReceivedCallback) (channels.EventModel, error) {
 	databaseName := path + databaseSuffix
-	return newWASMModel(databaseName, cb)
+	return newWASMModel(databaseName, encryption, cb)
 }
 
 // newWASMModel creates the given [idb.Database] and returns a wasmModel.
-func newWASMModel(databaseName string, cb MessageReceivedCallback) (
-	*wasmModel, error) {
+func newWASMModel(databaseName string, encryption cryptoChannel.Cipher,
+	cb MessageReceivedCallback) (*wasmModel, error) {
 	// Attempt to open database object
 	ctx, cancel := newContext()
 	defer cancel()
@@ -88,8 +90,45 @@ func newWASMModel(databaseName string, cb MessageReceivedCallback) (
 
 	// Wait for database open to finish
 	db, err := openRequest.Await(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	return &wasmModel{db: db, receivedMessageCB: cb}, err
+	// FIXME: The below is a hack that for some reason prevents moving on with
+	//        uninitialized database despite the previous call to Await.
+	//        It would be idea to find a different solution.
+	// Close and open again to ensure the state is finalized
+	err = db.Close()
+	if err != nil {
+		return nil, err
+	}
+	openRequest, err = idb.Global().Open(ctx, databaseName, currentVersion,
+		func(db *idb.Database, oldVersion, newVersion uint) error {
+			return nil
+		})
+	if err != nil {
+		return nil, err
+	}
+	// Wait for database open to finish
+	db, err = openRequest.Await(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	encryptionStatus := encryption != nil
+	loadedEncryptionStatus, err := storage.StoreIndexedDbEncryptionStatus(
+		databaseName, encryptionStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	if encryptionStatus != loadedEncryptionStatus {
+		return nil, errors.New(
+			"Cannot load database with different encryption status.")
+	} else if !encryptionStatus {
+		jww.WARN.Printf("IndexedDb encryption disabled!")
+	}
+	return &wasmModel{db: db, receivedMessageCB: cb, cipher: encryption}, err
 }
 
 // v1Upgrade performs the v0 -> v1 database upgrade.
