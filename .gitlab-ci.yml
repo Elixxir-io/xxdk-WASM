@@ -36,6 +36,10 @@ wasm-test:
   script:
     - export GOPATH=/root/go/
     - export PATH=$GOPATH/bin:$PATH
+    - echo $GOPATH
+    - echo $PATH
+    - go install github.com/agnivade/wasmbrowsertest@latest
+    - mv $GOPATH/bin/wasmbrowsertest $GOPATH/bin/go_js_wasm_exec
     - echo > utils/utils_js.s
     - GOOS=js GOARCH=wasm go test ./... -v
 
