@@ -32,7 +32,9 @@ func Throw(exception Exception, err error) {
 	throw(exception, fmt.Sprintf("%+v", err))
 }
 
-func throw(exception Exception, message string)
+func throw(_ Exception, _ string) {
+
+}
 
 // Exception are the possible Javascript error types that can be thrown.
 type Exception string
