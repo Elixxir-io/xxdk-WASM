@@ -116,27 +116,6 @@ func (c *Cmix) ReadyToSend(js.Value, []js.Value) interface{} {
 	return c.api.ReadyToSend()
 }
 
-// IsReady returns true if at least the given percent of node registrations have
-// completed. If not all have completed, then it returns false and howClose will
-// be a percent (0-1) of node registrations completed.
-//
-// Parameters:
-//  - args[0] - The percentage of nodes required to be registered with to be
-//    ready. This is a number between 0 and 1 (float64).
-//
-// Returns:
-//  - JSON of [bindings.IsReadyInfo] (Uint8Array).
-//  - Throws TypeError if getting the information fails.
-func (c *Cmix) IsReady(_ js.Value, args []js.Value) interface{} {
-	isReadyInfo, err := c.api.IsReady(args[0].Float())
-	if err != nil {
-		utils.Throw(utils.TypeError, err)
-		return nil
-	}
-
-	return utils.CopyBytesToJS(isReadyInfo)
-}
-
 // NetworkFollowerStatus gets the state of the network follower. It returns a
 // status with the following values:
 //  Stopped  - 0
@@ -165,6 +144,27 @@ func (c *Cmix) GetNodeRegistrationStatus(js.Value, []js.Value) interface{} {
 	}
 
 	return utils.CopyBytesToJS(b)
+}
+
+// IsReady returns true if at least the given percent of node registrations have
+// completed. If not all have completed, then it returns false and howClose will
+// be a percent (0-1) of node registrations completed.
+//
+// Parameters:
+//  - args[0] - The percentage of nodes required to be registered with to be
+//    ready. This is a number between 0 and 1 (float64).
+//
+// Returns:
+//  - JSON of [bindings.IsReadyInfo] (Uint8Array).
+//  - Throws TypeError if getting the information fails.
+func (c *Cmix) IsReady(_ js.Value, args []js.Value) interface{} {
+	isReadyInfo, err := c.api.IsReady(args[0].Float())
+	if err != nil {
+		utils.Throw(utils.TypeError, err)
+		return nil
+	}
+
+	return utils.CopyBytesToJS(isReadyInfo)
 }
 
 // PauseNodeRegistrations stops all node registrations and returns a function to
