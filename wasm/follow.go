@@ -116,7 +116,7 @@ func (c *Cmix) ReadyToSend(js.Value, []js.Value) interface{} {
 	return c.api.ReadyToSend()
 }
 
-// IsReady returns true if at least percentReady of node registrations has
+// IsReady returns true if at least the given percent of node registrations have
 // completed. If not all have completed, then it returns false and howClose will
 // be a percent (0-1) of node registrations completed.
 //
@@ -171,7 +171,7 @@ func (c *Cmix) GetNodeRegistrationStatus(js.Value, []js.Value) interface{} {
 // resume them.
 //
 // Parameters:
-//  - args[1] - The timeout, in milliseconds, to wait when stopping threads
+//  - args[0] - The timeout, in milliseconds, to wait when stopping threads
 //    before failing (int).
 //
 // Returns:
@@ -190,8 +190,8 @@ func (c *Cmix) PauseNodeRegistrations(_ js.Value, args []js.Value) interface{} {
 // registrations up to the initialized maximum.
 //
 // Parameters:
-//  - toRun - The number of parallel node registrations (int).
-//  - timeoutMS - The timeout, in milliseconds, to wait when changing node
+//  - args[0] - The number of parallel node registrations (int).
+//  - args[1] - The timeout, in milliseconds, to wait when changing node
 //    registrations before failing (int).
 //
 // Returns:
