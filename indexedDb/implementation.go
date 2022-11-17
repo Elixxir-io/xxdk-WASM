@@ -636,7 +636,7 @@ func (w *wasmModel) getIndex(objectStoreName string,
 			"Unable to get from ObjectStore: %+v", err)
 	}
 
-	jww.DEBUG.Printf("Got via index from %s/%s/%s",
+	jww.DEBUG.Printf("Got via index from %s/%s/%s: %s",
 		objectStoreName, indexName, key, resultObj)
 	return resultObj, nil
 }
