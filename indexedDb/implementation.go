@@ -529,12 +529,20 @@ func (w *wasmModel) GetMessage(messageID cryptoChannel.MessageID) (channels.Mode
 		}
 	}
 
+	var parentMsgId cryptoChannel.MessageID
+	if lookupResult.ParentMessageID != nil {
+		parentMsgId, err = cryptoChannel.UnmarshalMessageID(lookupResult.ParentMessageID)
+		if err != nil {
+			return channels.ModelMessage{}, err
+		}
+	}
+
 	return channels.ModelMessage{
 		UUID:            lookupResult.ID,
 		Nickname:        lookupResult.Nickname,
 		MessageID:       messageID,
 		ChannelID:       channelId,
-		ParentMessageID: cryptoChannel.MessageID{},
+		ParentMessageID: parentMsgId,
 		Timestamp:       lookupResult.Timestamp,
 		Lease:           lookupResult.Lease,
 		Status:          channels.SentStatus(lookupResult.Status),
