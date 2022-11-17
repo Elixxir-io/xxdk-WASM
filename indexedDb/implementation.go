@@ -637,7 +637,7 @@ func (w *wasmModel) getIndex(objectStoreName string,
 	}
 
 	jww.DEBUG.Printf("Got via index from %s/%s/%s: %s",
-		objectStoreName, indexName, key, resultObj)
+		objectStoreName, indexName, key, resultObj.String())
 	return resultObj, nil
 }
 
@@ -653,12 +653,8 @@ func (w *wasmModel) msgIDLookup(messageID cryptoChannel.MessageID) (*Message,
 	}
 
 	// Process result into string
-	resultStr := utils.JsToJson(keyObj)
-	jww.DEBUG.Printf("Index lookup of %s/%s/%s: %s",
-		messageStoreName, messageStoreMessageIndex, msgIDStr, resultStr)
-
 	resultMsg := &Message{}
-	err = json.Unmarshal([]byte(resultStr), resultMsg)
+	err = json.Unmarshal([]byte(utils.JsToJson(keyObj)), resultMsg)
 	if err != nil {
 		return nil, err
 	}
