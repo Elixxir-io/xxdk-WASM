@@ -107,8 +107,8 @@ func TestWasmModel_DeleteMessage(t *testing.T) {
 	}
 }
 
-// Test wasmModel.UpdateSentStatus happy path and ensure fields don't change.
-func Test_wasmModel_UpdateSentStatus(t *testing.T) {
+// Test wasmModel.UpdateFromUUID happy path and ensure fields don't change.
+func Test_wasmModel_UpdateFromUUID(t *testing.T) {
 	storage.GetLocalStorage().Clear()
 	testString := "test"
 	testMsgId := channel.MakeMessageID([]byte(testString), &id.ID{1})
