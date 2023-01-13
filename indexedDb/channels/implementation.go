@@ -504,7 +504,8 @@ func (w *wasmModel) DeleteMessage(messageID message.ID) error {
 }
 
 // MuteUser is called whenever a user is muted or unmuted.
-func (w *wasmModel) MuteUser(channelID *id.ID, pubKey ed25519.PublicKey, unmute bool) {
+func (w *wasmModel) MuteUser(
+	channelID *id.ID, pubKey ed25519.PublicKey, unmute bool) {
 	go w.mutedUserCB(channelID, pubKey, unmute)
 }
 

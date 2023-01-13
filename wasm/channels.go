@@ -1684,6 +1684,7 @@ func (emb *eventModelBuilder) Build(path string) bindings.EventModel {
 		updateFromMessageID: utils.WrapCB(emJs, "UpdateFromMessageID"),
 		getMessage:          utils.WrapCB(emJs, "GetMessage"),
 		deleteMessage:       utils.WrapCB(emJs, "DeleteMessage"),
+		muteUser:            utils.WrapCB(emJs, "MuteUser"),
 	}
 }
 
@@ -1699,6 +1700,7 @@ type eventModel struct {
 	updateFromMessageID func(args ...any) js.Value
 	getMessage          func(args ...any) js.Value
 	deleteMessage       func(args ...any) js.Value
+	muteUser            func(args ...any) js.Value
 }
 
 // JoinChannel is called whenever a channel is joined locally.
@@ -1916,6 +1918,17 @@ func (em *eventModel) DeleteMessage(messageID []byte) error {
 	}
 
 	return nil
+}
+
+// MuteUser mutes the given user or unmutes them.
+//
+// Parameters:
+//   - channelID - The bytes of the [id.ID] of the channel the user is being
+//     muted in.
+//   - pubKey - The [ed25519.PublicKey] of the user that is muted or unmuted.
+func (em *eventModel) MuteUser(channelID, pubkey []byte, unmute bool) {
+	em.muteUser(
+		utils.CopyBytesToJS(channelID), utils.CopyBytesToJS(pubkey), unmute)
 }
 
 // MessageAndError contains a message returned by eventModel.GetMessage or any
