@@ -55,6 +55,7 @@ emoji-update:
     - go run -ldflags '-w -s' ./emoji/... -o emojiSet.json -v 2
     - cp emojiSet.json release/
   artifacts:
+    expose_as: 'artifact 1'
     paths:
       - release/emojiSet.json
       - emojiSet.json
