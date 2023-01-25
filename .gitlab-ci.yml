@@ -17,33 +17,33 @@ before_script:
   - export GOPATH=$HOME/go/bin
 
 stages:
-#  - test
+  - test
   - build
-#  - tag
+  - tag
   - doc-update
   - combine_artefacts
 
-#build:
-#  stage: build
-#  except:
-#    - tags
-#  script:
-#    - go mod vendor -v
-#    - mkdir -p release
-#    - GOOS=js GOARCH=wasm go build -ldflags '-w -s' -o release/xxdk.wasm main.go
-#    - cp wasm_exec.js release/
-#  artifacts:
-#    paths:
-#      - release/
-#    expire_in: 1 hour
+build:
+  stage: build
+  except:
+    - tags
+  script:
+    - go mod vendor -v
+    - mkdir -p release
+    - GOOS=js GOARCH=wasm go build -ldflags '-w -s' -o release/xxdk.wasm main.go
+    - cp wasm_exec.js release/
+  artifacts:
+    paths:
+      - release/
+    expire_in: 1 hour
 
-#go-test:
-#  stage: test
-#  except:
-#    - tags
-#  script:
-#    - go mod vendor -v
-#    - go test ./... -v
+go-test:
+  stage: test
+  except:
+    - tags
+  script:
+    - go mod vendor -v
+    - go test ./... -v
 
 emoji-update:
   stage: build
@@ -53,30 +53,27 @@ emoji-update:
     - go mod vendor -v
     - mkdir -p release
     - go run -ldflags '-w -s' ./emoji/... -o emojiSet.json -v 2
-    - cp emojiSet.json release/
   artifacts:
-    expose_as: 'artifact 1'
     paths:
-      - release/emojiSet.json
       - emojiSet.json
     expire_in: 1 hour
-#
-#wasm-test:
-#  stage: test
-#  except:
-#    - tags
-#  script:
-#    - export PATH=/root/go/bin:$PATH
-#    - echo > utils/utils_js.s
-#    - env
-#    # - go install github.com/agnivade/wasmbrowsertest@latest
-#    # - mv ~/go/bin/go_js_wasm_exec ~/go/bin/go_js_wasm_exec.old
-#    # - ln -s ~/go/bin/wasmbrowsertest ~/go/bin/go_js_wasm_exec
-#    - go mod vendor
-#    - unset SSH_PRIVATE_KEY
-#    - unset $(env | grep '=' | awk -F= '{print $1}' | grep -v PATH | grep -v GO | grep -v HOME)
-#    - GOOS=js GOARCH=wasm go test ./indexedDb/... -v
-#    - GOOS=js GOARCH=wasm go test ./... -v
+
+wasm-test:
+  stage: test
+  except:
+    - tags
+  script:
+    - export PATH=/root/go/bin:$PATH
+    - echo > utils/utils_js.s
+    - env
+    # - go install github.com/agnivade/wasmbrowsertest@latest
+    # - mv ~/go/bin/go_js_wasm_exec ~/go/bin/go_js_wasm_exec.old
+    # - ln -s ~/go/bin/wasmbrowsertest ~/go/bin/go_js_wasm_exec
+    - go mod vendor
+    - unset SSH_PRIVATE_KEY
+    - unset $(env | grep '=' | awk -F= '{print $1}' | grep -v PATH | grep -v GO | grep -v HOME)
+    - GOOS=js GOARCH=wasm go test ./indexedDb/... -v
+    - GOOS=js GOARCH=wasm go test ./... -v
 
 combine_artefacts:
   stage: combine_artefacts
@@ -87,7 +84,7 @@ combine_artefacts:
     - echo $CI_SERVER_URL/api/v4/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/jobs
     - 'PIPELINE_JOBS=$(curl --header "PRIVATE-TOKEN: $GITLAB_ACCESS_TOKEN" $CI_SERVER_URL/api/v4/projects/$CI_PROJECT_ID/pipelines/$CI_PIPELINE_ID/jobs)'
     - echo $PIPELINE_JOBS
-    - BUILD_JOB_JSON=$(echo $WASM_PIPELINE_JOB | jq '.[] | select(.name=="build")')
+    - BUILD_JOB_JSON=$(echo $PIPELINE_JOBS | jq '.[] | select(.name=="build")')
     - EMOJI_UPDATE_JOB_JSON=$(echo $PIPELINE_JOBS | jq '.[] | select(.name=="emoji-update")')
 
     - BUILD_JOB_ID=$(echo $BUILD_JOB_JSON | jq -r '.["id"]')
@@ -101,6 +98,7 @@ combine_artefacts:
   artifacts:
     paths:
       - release/
+    expose_as: "release"
 
 tag:
   stage: build
