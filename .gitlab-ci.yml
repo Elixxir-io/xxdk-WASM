@@ -52,11 +52,11 @@ emoji-update:
   script:
     - go mod vendor -v
     - mkdir -p release
-    - go run -ldflags '-w -s' ./emoji/... -o emojiSet.js -v 2
-    - mv emojiSet.js release/emojiSet.json
+    - go run -ldflags '-w -s' ./emoji/... -o emojiSet.json -v 2
+    - cp emojiSet.json release/
   artifacts:
     paths:
-      - release/
+      - release/emojiSet.json
     expire_in: 1 hour
 #
 #wasm-test:
