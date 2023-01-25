@@ -17,7 +17,7 @@ before_script:
   - export GOPATH=$HOME/go/bin
 
 stages:
-  - test
+#  - test
   - build
   - tag
   - doc-update
@@ -53,7 +53,7 @@ emoji-update:
     - go mod vendor -v
     - mkdir -p release
     - go run -ldflags '-w -s' ./emoji/... -o emojiSet.json -v 2
-    - cp emojiSet.json release/
+    - cp emojiSet.js release/
   artifacts:
     paths:
       - release/
