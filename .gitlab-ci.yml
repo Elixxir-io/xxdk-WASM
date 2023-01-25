@@ -19,23 +19,23 @@ before_script:
 stages:
 #  - test
   - build
-  - tag
+#  - tag
   - doc-update
   - combine_artefacts
 
-build:
-  stage: build
-  except:
-    - tags
-  script:
-    - go mod vendor -v
-    - mkdir -p release
-    - GOOS=js GOARCH=wasm go build -ldflags '-w -s' -o release/xxdk.wasm main.go
-    - cp wasm_exec.js release/
-  artifacts:
-    paths:
-      - release/
-    expire_in: 1 hour
+#build:
+#  stage: build
+#  except:
+#    - tags
+#  script:
+#    - go mod vendor -v
+#    - mkdir -p release
+#    - GOOS=js GOARCH=wasm go build -ldflags '-w -s' -o release/xxdk.wasm main.go
+#    - cp wasm_exec.js release/
+#  artifacts:
+#    paths:
+#      - release/
+#    expire_in: 1 hour
 
 #go-test:
 #  stage: test
@@ -52,7 +52,7 @@ emoji-update:
   script:
     - go mod vendor -v
     - mkdir -p release
-    - go run -ldflags '-w -s' ./emoji/... -o emojiSet.json -v 2
+    - go run -ldflags '-w -s' ./emoji/... -o emojiSet.js -v 2
     - cp emojiSet.js release/
   artifacts:
     paths:
