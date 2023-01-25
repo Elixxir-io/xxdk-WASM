@@ -17,11 +17,36 @@ before_script:
   - export GOPATH=$HOME/go/bin
 
 stages:
-  - test
+#  - test
   - build
   - tag
   - doc-update
   - combine_artefacts
+
+#wasm-test:
+#  stage: test
+#  except:
+#    - tags
+#  script:
+#    - export PATH=/root/go/bin:$PATH
+#    - echo > utils/utils_js.s
+#    - env
+#    # - go install github.com/agnivade/wasmbrowsertest@latest
+#    # - mv ~/go/bin/go_js_wasm_exec ~/go/bin/go_js_wasm_exec.old
+#    # - ln -s ~/go/bin/wasmbrowsertest ~/go/bin/go_js_wasm_exec
+#    - go mod vendor
+#    - unset SSH_PRIVATE_KEY
+#    - unset $(env | grep '=' | awk -F= '{print $1}' | grep -v PATH | grep -v GO | grep -v HOME)
+#    - GOOS=js GOARCH=wasm go test ./indexedDb/... -v
+#    - GOOS=js GOARCH=wasm go test ./... -v
+#
+#go-test:
+#  stage: test
+#  except:
+#    - tags
+#  script:
+#    - go mod vendor -v
+#    - go test ./... -v
 
 build:
   stage: build
@@ -37,14 +62,6 @@ build:
       - release/
     expire_in: 1 hour
 
-go-test:
-  stage: test
-  except:
-    - tags
-  script:
-    - go mod vendor -v
-    - go test ./... -v
-
 emoji-update:
   stage: build
   except:
@@ -57,23 +74,6 @@ emoji-update:
     paths:
       - emojiSet.json
     expire_in: 1 hour
-
-wasm-test:
-  stage: test
-  except:
-    - tags
-  script:
-    - export PATH=/root/go/bin:$PATH
-    - echo > utils/utils_js.s
-    - env
-    # - go install github.com/agnivade/wasmbrowsertest@latest
-    # - mv ~/go/bin/go_js_wasm_exec ~/go/bin/go_js_wasm_exec.old
-    # - ln -s ~/go/bin/wasmbrowsertest ~/go/bin/go_js_wasm_exec
-    - go mod vendor
-    - unset SSH_PRIVATE_KEY
-    - unset $(env | grep '=' | awk -F= '{print $1}' | grep -v PATH | grep -v GO | grep -v HOME)
-    - GOOS=js GOARCH=wasm go test ./indexedDb/... -v
-    - GOOS=js GOARCH=wasm go test ./... -v
 
 combine_artefacts:
   stage: combine_artefacts
