@@ -53,7 +53,7 @@ emoji-update:
     - go mod vendor -v
     - mkdir -p release
     - go run -ldflags '-w -s' ./emoji/... -o emojiSet.js -v 2
-    - cp emojiSet.js release/
+    - mv emojiSet.js release/emojiSet.json
   artifacts:
     paths:
       - release/
