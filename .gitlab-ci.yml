@@ -57,6 +57,7 @@ emoji-update:
   artifacts:
     paths:
       - release/emojiSet.json
+      - emojiSet.json
     expire_in: 1 hour
 #
 #wasm-test:
